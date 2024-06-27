@@ -1,0 +1,36 @@
+from fastapi import FastAPI
+import whisper
+from voice_sample import VoiceSample
+
+app = FastAPI()
+
+
+class Transcribe:
+    _model: whisper.model
+
+    def __init__(self):
+        self._model = whisper.load_model("medium")
+
+    def get_transcript(self, sound: VoiceSample) -> str:
+        return self._model.transcribe(sound.get_sample_as_np_array(), language='pl')['text'].strip()
+
+
+@app.get("/request/")
+async def request(audio: VoiceSample):
+    global transcribe
+    out = transcribe.get_transcript(audio)
+    print(out)
+    return out
+
+
+@app.get("/")
+async def root():
+    return {"message": "Hello, use /request/ to send a voice sample to transcribe."}
+
+
+def init():
+    global transcribe
+    transcribe = Transcribe()
+
+
+init()
