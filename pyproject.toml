@@ -8,7 +8,6 @@ packages = [
     { include = "client", from = "." },
     { include = "server", from = "." },
     { include = "core", from = "." },
-    { include = "data/audio/*.mp3", from = "." }
 ]
 
 [tool.poetry.dependencies]
