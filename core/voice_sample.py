@@ -54,13 +54,13 @@ class VoiceSample(BaseModel):
         return VoiceSample(data=audio_segment.raw_data, frame_rate=frame_rate, sample_width=self.sample_width)
 
     def save(self, filename: Path):
-        # Save the last recording as WAV file
-        wf = wave.open(str(filename), 'wb')
-        wf.setnchannels(1)
-        wf.setsampwidth(self.sample_width)
-        wf.setframerate(self.frame_rate)
-        wf.writeframes(self.data)
-        wf.close()
+        # create a new wave file
+        open(str(filename), 'a').close()
+        with wave.open(str(filename), 'wb') as wf:
+            wf.setnchannels(1)
+            wf.setsampwidth(self.sample_width)
+            wf.setframerate(self.frame_rate)
+            wf.writeframes(self.data)
 
     def __len__(self):
         return len(self.data)

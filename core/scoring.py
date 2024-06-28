@@ -1,7 +1,11 @@
 import difflib
 import json
 import heapq
+import os
 from dataclasses import dataclass
+from pathlib import Path
+import datetime
+
 import numpy as np
 from core.voice_sample import VoiceSample
 
@@ -28,13 +32,19 @@ class Score:
     accuracy: float = 0.
     time: float = 0.
     user_answer: str = ""
+    timestamp: datetime.datetime = datetime.datetime.now()
 
     @staticmethod
     def FromDict(d: dict):
-        return Score(d["accuracy"], d["time"], d["user_answer"])
+        return Score(d["accuracy"], d["time"], d["user_answer"], datetime.datetime.fromisoformat(d["timestamp"]))
 
     def dict(self):
-        return {"accuracy": self.accuracy, "time": self.time, "user_answer": self.user_answer}
+        return {"accuracy": self.accuracy, "time": self.time, "user_answer": self.user_answer,
+                "timestamp": self.timestamp.isoformat()}
+
+
+def check_directories():
+    Path(os.path.join(os.getcwd(), "data/audio/user")).mkdir(parents=True, exist_ok=True)
 
 
 class Scoring:
@@ -44,25 +54,22 @@ class Scoring:
     _total_score: TotalScore
     _total_scores_file: str
     _scoring_settings: dict[str, float]
-    _recordings: dict[str, list[VoiceSample]]
-    _recordings_file: str
 
     def __init__(self, questions_file: str = "data/sentences.txt", answers_file: str = "data/answers.json",
-                 recordings_file: str = "data/recordings.json", total_scores_file: str = "data/scores.json",
-                 settings_file: str = "data/settings.json"):
+                 total_scores_file: str = "data/scores.json", settings_file: str = "data/settings.json"):
         self._answers_file = answers_file
         self._total_scores_file = total_scores_file
-        self._recordings_file = recordings_file
         self._answers = {}
         self._scores_sort = []
         self._recordings = {}
         self._total_score = TotalScore()
 
+        check_directories()
+
         self.load_answers()
         self.load_questions(questions_file)
         self.load_total_scores()
         self.load_settings(settings_file)
-        self.load_recordings()
         heapq.heapify(self._scores_sort)
 
     def load_answers(self):
@@ -75,7 +82,7 @@ class Scoring:
             sentence = line.strip()
             if sentence not in self._answers:
                 self._answers[sentence] = Score()
-                self._scores_sort.append((0, sentence))
+                self._scores_sort.append((Score(), sentence))
 
     def load_total_scores(self):
         self._total_score = TotalScore.FromDict(create_and_load_file(self._total_scores_file, self._total_score.dict()))
@@ -83,29 +90,21 @@ class Scoring:
     def load_settings(self, settings_file: str):
         pass
 
-    def load_recordings(self):
-        self._recordings = {sentence: [VoiceSample.parse_raw(audio) for audio in audios] for sentence, audios in
-                            create_and_load_file(self._recordings_file, {}).items()}
-
     def get_next_sentence(self) -> str:
         return heapq.heappop(self._scores_sort)[1]
 
     def set_sentence_answer(self, sentence: str, user_answer: str, accuracy_score: float, time_score: float):
-        score = Score(accuracy_score, time_score, user_answer)
+        score = Score(accuracy_score, time_score, user_answer, datetime.datetime.now())
         self._answers[sentence] = score
         heapq.heappush(self._scores_sort, (score, sentence))
         with open(self._answers_file, 'w') as fw:
             jsonobj = json.dumps({sentence: score.dict() for sentence, score in self._answers.items()}, indent=4)
             fw.write(jsonobj)
 
-    def save_user_audio(self, sentence: str, audio: VoiceSample):
-        if sentence not in self._recordings:
-            self._recordings[sentence] = []
-        self._recordings[sentence].append(audio)
-        with open(self._recordings_file, 'w') as fw:
-            jsonobj = json.dumps({sentence: [audio.json() for audio in audios] for sentence, audios in
-                                  self._recordings.items()}, indent=4)
-            fw.write(jsonobj)
+    def save_user_audio(self, audio: VoiceSample):
+        file = Path(f"data/audio/user/{datetime.datetime.now().isoformat(sep='-', timespec='seconds')}.wav")
+        open(os.path.join(os.getcwd(), str(file)), 'w').close()
+        audio.save(file)
 
     def total_scores(self) -> TotalScore:
         return self._total_score

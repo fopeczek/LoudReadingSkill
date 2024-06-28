@@ -29,11 +29,15 @@ class ReadingApp:
     def __init__(self):
         self.started_recording = False
         self.answered_times = 0
+        self.max_answers = 1  # TODO get from settings
         self.rerolled = 0
+        self.max_rerolls = 1  # TODO get from settings
 
         self.current_sentence = None
         self.time_start = 0.
         self.time_taken = 0.
+
+        self.connection_error_popup = False
 
         self._scoring = Scoring()
         self._recorder = Recorder()
@@ -56,50 +60,50 @@ class ReadingApp:
         self._question_text.configure(background='black', foreground='white')
         self._question_text.tag_configure("center", justify='center')
         self._question_text.tag_config('highlight', foreground='red', justify='center')
-        self._question_text.grid(row=0, column=0, columnspan=2, pady=20)
+        self._question_text.grid(row=0, column=0, columnspan=3, pady=20)
 
         self._record_button = tk.Button(self._window, text="Start recording")
         self._record_button.configure(background='black', foreground='white')
         self._record_button.configure(activebackground='black', activeforeground='white')
         self._record_button.bind("<ButtonPress>", self.toggle_recording)
         self._window.bind("<KeyPress>", self.toggle_recording)
-        self._record_button.grid(row=1, column=0, columnspan=2)
+        self._record_button.grid(row=1, column=0, columnspan=3)
 
         self._next_question_button = tk.Button(self._window, text="Next question")
         self._next_question_button.configure(background='black', foreground='white')
         self._next_question_button.configure(activebackground='black', activeforeground='white')
         self._next_question_button.bind("<ButtonPress>", self.next_question)
-        self._next_question_button.grid(row=2, column=0, columnspan=2, pady=5)
+        self._next_question_button.grid(row=2, column=0, columnspan=3, pady=5)
 
         self._accuracy_score_label = tk.Label(self._window, text=f"Accuracy: {self._scoring.total_scores().accuracy}")
         self._accuracy_score_label.configure(background='black', foreground='white')
-        self._accuracy_score_label.grid(row=3, column=0, columnspan=2)
+        self._accuracy_score_label.grid(row=3, column=0, columnspan=3)
 
         self._time_score_label = tk.Label(self._window, text=f"Speed: {self._scoring.total_scores().speed}")
         self._time_score_label.configure(background='black', foreground='white')
-        self._time_score_label.grid(row=4, column=0, columnspan=2)
+        self._time_score_label.grid(row=4, column=0, columnspan=3)
 
         self._correct_label = tk.Label(self._window, text=f"Correct: {self._scoring.total_scores().correct}")
         self._correct_label.configure(background='black', foreground='white')
-        self._correct_label.grid(row=5, column=0, columnspan=2)
+        self._correct_label.grid(row=5, column=0, columnspan=3)
 
         self._incorrect_label = tk.Label(self._window, text=f"Incorrect: {self._scoring.total_scores().incorrect}")
         self._incorrect_label.configure(background='black', foreground='white')
-        self._incorrect_label.grid(row=6, column=0, columnspan=2)
+        self._incorrect_label.grid(row=6, column=0, columnspan=3)
 
         self._total_questions_label = tk.Label(self._window,
                                                text=f"Total questions: {self._scoring.total_scores().total_questions}")
         self._total_questions_label.configure(background='black', foreground='white')
-        self._total_questions_label.grid(row=7, column=0, columnspan=2)
+        self._total_questions_label.grid(row=7, column=0, columnspan=3)
 
         self.next_question()
 
         self.check_speech2text()
 
     def toggle_recording(self, event):
-        if event.keysym == "space" or event.widget == self._record_button:
+        if (event.keysym == "space" or event.widget == self._record_button) and not self.connection_error_popup:
             if not self.started_recording:
-                if self.answered_times < 1:
+                if self.answered_times < self.max_answers:
                     self.start_recording()
             else:
                 self.stop_recording()
@@ -132,8 +136,8 @@ class ReadingApp:
         if sound.length() < 1.0:
             loading.destroy()
             self._info_label = tk.Label(self._window, text="Recording too short. ")
-            self._info_label.configure(background='black', foreground='white')
-            self._info_label.grid(row=1, column=1)
+            self._info_label.configure(background='black', foreground='red')
+            self._info_label.grid(row=1, column=2, padx=20)
             return
         success, transcript = self._speech2text.get_transcript(sound)
         loading.destroy()
@@ -147,8 +151,8 @@ class ReadingApp:
     def process_user_answer(self, transcript):
         if not transcript or len(transcript) < 1 or transcript == '""':
             self._info_label = tk.Label(self._window, text="Could not recognize. Try again")
-            self._info_label.configure(background='black', foreground='white')
-            self._info_label.grid(row=1, column=1)
+            self._info_label.configure(background='black', foreground='red')
+            self._info_label.grid(row=1, column=2, padx=20)
             return
 
         self.answered_times += 1
@@ -199,12 +203,12 @@ class ReadingApp:
         self._total_questions_label['text'] += " + 1"
 
         self._scoring.set_sentence_answer(self.current_sentence, transcript, accuracy, speed)
-        self._scoring.save_user_audio(self.current_sentence, self._recorder.get_last_recording())
+        self._scoring.save_user_audio(self._recorder.get_last_recording())
         self._question_text.delete('1.0', tk.END)
         self.insert_colored_text(redacted_answer_in_html)
 
     def next_question(self, event=None):
-        if self.rerolled < 1:  # TODO replace 1 with max rerolls
+        if self.rerolled < self.max_rerolls:
             self.current_sentence = self._scoring.get_next_sentence()
             self._question_text['height'] = np.ceil(len(self.current_sentence) / 80)
             self.insert_colored_text(self.current_sentence)
@@ -235,11 +239,13 @@ class ReadingApp:
 
     def check_speech2text(self):
         if not self._speech2text.check():
-            T = Thread(target=self.no_connection_popup, args=(False,))
-            T.start()
+            Thread(target=self.no_connection_popup, args=(False,)).start()
             return
 
     def no_connection_popup(self, process_last_recording=True):
+        self.connection_error_popup = True
+        self._record_button['state'] = 'disabled'
+        self._next_question_button['state'] = 'disabled'
         popup = tk.Toplevel(self._window)
         popup.title("Error")
         popup.geometry("300x100")
@@ -251,20 +257,29 @@ class ReadingApp:
         popup.grid_columnconfigure(1, weight=1)
         label = tk.Label(popup, text="Could not connect to the server. ", background='black', foreground='white')
         label.grid(row=0, column=0, columnspan=2, pady=15)
-        button_run_locally = tk.Button(popup, text="Run locally", command=lambda: self.run_locally(popup, process_last_recording))
+        button_run_locally = tk.Button(popup, text="Run locally",
+                                       command=lambda: self.run_locally(popup, process_last_recording))
         button_run_locally.configure(background='black', foreground='white')
         button_run_locally.grid(row=1, column=0)
-        button_exit = tk.Button(popup, text="Ok", command=popup.destroy)
+        button_exit = tk.Button(popup, text="Ok", command=lambda: self.close_connection_error_popup(popup))
         button_exit.configure(background='black', foreground='white')
         button_exit.grid(row=1, column=1)
         popup.lift()
+
+    def close_connection_error_popup(self, popup):
+        self.connection_error_popup = False
+        if self.answered_times < 1:
+            self._record_button['state'] = 'normal'
+        if self.rerolled < 1:
+            self._next_question_button['state'] = 'normal'
+        popup.destroy()
 
     def run_locally(self, popup, process_last_recording):
         loading = self.loading_popup("Loading", "Loading... ")
         self._speech2text.__init__(run_locally=True)
         self.time_start = time.time()
         loading.destroy()
-        popup.destroy()
+        self.close_connection_error_popup(popup)
         if process_last_recording:
             self.process_last_recording()
 
