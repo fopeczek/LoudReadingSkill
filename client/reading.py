@@ -6,7 +6,7 @@ from threading import Thread
 import numpy as np
 import os
 
-from ..core import Scoring, score_sentence, calc_time_penalty
+from core import Scoring, score_sentence, calc_time_penalty
 from .recorder import Recorder
 from .speech2text import Speech2Text
 
