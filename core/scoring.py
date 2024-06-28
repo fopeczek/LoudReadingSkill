@@ -3,6 +3,7 @@ import json
 import heapq
 from dataclasses import dataclass
 import numpy as np
+from core.voice_sample import VoiceSample
 
 
 @dataclass
@@ -43,19 +44,25 @@ class Scoring:
     _total_score: TotalScore
     _total_scores_file: str
     _scoring_settings: dict[str, float]
+    _recordings: dict[str, list[VoiceSample]]
+    _recordings_file: str
 
     def __init__(self, questions_file: str = "data/sentences.txt", answers_file: str = "data/answers.json",
-                 total_scores_file: str = "data/scores.json", settings_file: str = "data/settings.json"):
+                 recordings_file: str = "data/recordings.json", total_scores_file: str = "data/scores.json",
+                 settings_file: str = "data/settings.json"):
         self._answers_file = answers_file
         self._total_scores_file = total_scores_file
+        self._recordings_file = recordings_file
         self._answers = {}
         self._scores_sort = []
+        self._recordings = {}
         self._total_score = TotalScore()
 
         self.load_answers()
         self.load_questions(questions_file)
         self.load_total_scores()
         self.load_settings(settings_file)
+        self.load_recordings()
         heapq.heapify(self._scores_sort)
 
     def load_answers(self):
@@ -76,6 +83,10 @@ class Scoring:
     def load_settings(self, settings_file: str):
         pass
 
+    def load_recordings(self):
+        self._recordings = {sentence: [VoiceSample.parse_raw(audio) for audio in audios] for sentence, audios in
+                            create_and_load_file(self._recordings_file, {}).items()}
+
     def get_next_sentence(self) -> str:
         return heapq.heappop(self._scores_sort)[1]
 
@@ -85,6 +96,15 @@ class Scoring:
         heapq.heappush(self._scores_sort, (score, sentence))
         with open(self._answers_file, 'w') as fw:
             jsonobj = json.dumps({sentence: score.dict() for sentence, score in self._answers.items()}, indent=4)
+            fw.write(jsonobj)
+
+    def save_user_audio(self, sentence: str, audio: VoiceSample):
+        if sentence not in self._recordings:
+            self._recordings[sentence] = []
+        self._recordings[sentence].append(audio)
+        with open(self._recordings_file, 'w') as fw:
+            jsonobj = json.dumps({sentence: [audio.json() for audio in audios] for sentence, audios in
+                                  self._recordings.items()}, indent=4)
             fw.write(jsonobj)
 
     def total_scores(self) -> TotalScore:

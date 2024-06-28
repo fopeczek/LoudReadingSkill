@@ -46,6 +46,7 @@ class ReadingApp:
         self._window = tk.Tk()
         self._window.geometry("800x250")
         self._window.resizable(False, False)
+        self._window.attributes('-type', 'dialog')
         self._window.title("Reading")
         self._window.configure(bg='black')
         self._window.grid_columnconfigure(0, weight=1)
@@ -93,6 +94,8 @@ class ReadingApp:
 
         self.next_question()
 
+        self.check_speech2text()
+
     def toggle_recording(self, event):
         if event.keysym == "space" or event.widget == self._record_button:
             if not self.started_recording:
@@ -103,6 +106,8 @@ class ReadingApp:
 
     def start_recording(self):
         self.time_taken = time.time() - self.time_start
+        song = AudioSegment.from_mp3(os.path.join(os.getcwd(), "data/audio/start.mp3"))
+        Thread(target=play, args=(song,)).start()
         self._recorder.start_recording()
         self.started_recording = True
         self._record_button['state'] = 'active'
@@ -113,24 +118,33 @@ class ReadingApp:
 
     def stop_recording(self):
         self._recorder.stop_recording()
+        song = AudioSegment.from_mp3(os.path.join(os.getcwd(), "data/audio/end.mp3"))
+        Thread(target=play, args=(song,)).start()
         self.started_recording = False
         self._record_button['text'] = 'Start recording'
         self._record_button['background'] = 'black'
         self._record_button['activebackground'] = 'black'
+        self.process_last_recording()
+
+    def process_last_recording(self):
         loading = self.loading_popup("Processing", "Processing... ")
         sound = self._recorder.get_last_recording()
-        loading.destroy()
         if sound.length() < 1.0:
+            loading.destroy()
             self._info_label = tk.Label(self._window, text="Recording too short. ")
             self._info_label.configure(background='black', foreground='white')
             self._info_label.grid(row=1, column=1)
             return
         success, transcript = self._speech2text.get_transcript(sound)
+        loading.destroy()
 
         if not success:
             self.no_connection_popup()
             return
 
+        self.process_user_answer(transcript)
+
+    def process_user_answer(self, transcript):
         if not transcript or len(transcript) < 1 or transcript == '""':
             self._info_label = tk.Label(self._window, text="Could not recognize. Try again")
             self._info_label.configure(background='black', foreground='white')
@@ -185,6 +199,7 @@ class ReadingApp:
         self._total_questions_label['text'] += " + 1"
 
         self._scoring.set_sentence_answer(self.current_sentence, transcript, accuracy, speed)
+        self._scoring.save_user_audio(self.current_sentence, self._recorder.get_last_recording())
         self._question_text.delete('1.0', tk.END)
         self.insert_colored_text(redacted_answer_in_html)
 
@@ -218,41 +233,53 @@ class ReadingApp:
             lines += np.ceil(len(self._user_answer.get('1.0', tk.END)) / 80)
         self._window.geometry(f"800x{int(250 + 20 * lines)}")
 
-    def no_connection_popup(self):
+    def check_speech2text(self):
+        if not self._speech2text.check():
+            T = Thread(target=self.no_connection_popup, args=(False,))
+            T.start()
+            return
+
+    def no_connection_popup(self, process_last_recording=True):
         popup = tk.Toplevel(self._window)
         popup.title("Error")
         popup.geometry("300x100")
         popup.resizable(False, False)
+        popup.attributes('-type', 'dialog')
+        popup.attributes("-topmost", True)
         popup.configure(bg='black')
         popup.grid_columnconfigure(0, weight=1)
         popup.grid_columnconfigure(1, weight=1)
         label = tk.Label(popup, text="Could not connect to the server. ", background='black', foreground='white')
         label.grid(row=0, column=0, columnspan=2, pady=15)
-        button_run_locally = tk.Button(popup, text="Run locally", command=lambda: self.run_locally(popup))
+        button_run_locally = tk.Button(popup, text="Run locally", command=lambda: self.run_locally(popup, process_last_recording))
         button_run_locally.configure(background='black', foreground='white')
         button_run_locally.grid(row=1, column=0)
         button_exit = tk.Button(popup, text="Ok", command=popup.destroy)
         button_exit.configure(background='black', foreground='white')
         button_exit.grid(row=1, column=1)
+        popup.lift()
 
-    def run_locally(self, popup):
+    def run_locally(self, popup, process_last_recording):
         loading = self.loading_popup("Loading", "Loading... ")
         self._speech2text.__init__(run_locally=True)
         self.time_start = time.time()
         loading.destroy()
         popup.destroy()
+        if process_last_recording:
+            self.process_last_recording()
 
     def loading_popup(self, title, text):
         popup = tk.Toplevel(self._window)
         popup.title(title)
         popup.geometry("150x50")
         popup.resizable(False, False)
+        popup.attributes('-type', 'dialog')
+        popup.attributes("-topmost", True)
         popup.configure(bg='black')
         popup.grid_columnconfigure(0, weight=1)
         popup.grid_rowconfigure(0, weight=1)
         label = tk.Label(popup, text=text, background='black', foreground='white')
         label.grid(row=0, column=0)
-        popup.update()
         return popup
 
     @property

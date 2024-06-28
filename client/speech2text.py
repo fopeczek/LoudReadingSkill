@@ -19,3 +19,12 @@ class Speech2Text:
                 return True, requests.get("http://localhost:8000/request/", data=sound.json()).text.strip()
             except requests.exceptions.ConnectionError:
                 return False, "Could not connect to the server. "
+
+    def check(self) -> bool:
+        if self.run_locally:
+            return True
+        try:
+            out = requests.get("http://localhost:8000/request/", data={}).text
+            return True
+        except requests.exceptions.ConnectionError:
+            return False
