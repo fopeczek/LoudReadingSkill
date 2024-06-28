@@ -4,12 +4,17 @@ version = "0.1.0"
 description = ""
 authors = ["Silent <mikolaj@statystyka.net>"]
 readme = "README.md"
+packages = [
+    { include = "client", from = "." },
+    { include = "server", from = "." },
+    { include = "core", from = "." }
+]
 
 [tool.poetry.dependencies]
 python = "^3.11"
 pillow = "^10.3.0"
 openai = "^1.30.3"
-openai-whisper = {git = "https://github.com/openai/whisper.git", branch = "main"}
+openai-whisper = { git = "https://github.com/openai/whisper.git", branch = "main", optional = true }
 gtts = "^2.5.1"
 sounddevice = "^0.4.7"
 pyaudio = "^0.2.14"
@@ -18,7 +23,14 @@ requests = "^2.32.3"
 fastapi = "^0.111.0"
 uvicorn = "^0.30.1"
 
+[tool.poetry.extras]
+local = ["openai-whisper"]
+
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.poetry.scripts]
+loadreading_server = "server.whisper_server:main"
+loudreading_client = "client.readingg:main"
