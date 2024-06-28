@@ -310,6 +310,10 @@ class ReadingApp:
         )
         button_run_locally.configure(background="black", foreground="white")
         button_run_locally.grid(row=1, column=0)
+        try:
+            import whisper  # noqa F401
+        except ImportError:
+            button_run_locally["state"] = "disabled"
         button_exit = tk.Button(
             popup, text="Ok", command=lambda: self.close_connection_error_popup(popup)
         )
