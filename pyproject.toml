@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "loudreadingskill"
-version = "0.1.0"
+version = "1.0.0"
 description = ""
 authors = ["Silent <mikolaj@statystyka.net>"]
 readme = "README.md"
@@ -32,5 +32,5 @@ requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
-loadreading_server = "server.whisper_server:main"
-loudreading_client = "client.readingg:main"
+loudreading_server = "server.whisper_server:main"
+loudreading_client = "client.reading:main"
