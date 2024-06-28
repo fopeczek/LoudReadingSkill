@@ -5,7 +5,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import datetime
-import importlib.resources
+from importlib.resources import files
 
 import numpy as np
 from .voice_sample import VoiceSample
@@ -71,7 +71,7 @@ class Score:
 
 
 def get_resource_path(audio_file: Path | str) -> Path:
-    return importlib.resources.files("data.audio") / audio_file
+    return files("data.audio") / audio_file
 
 
 class Scoring:
