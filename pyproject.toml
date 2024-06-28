@@ -9,6 +9,7 @@ packages = [
     { include = "server", from = "." },
     { include = "core", from = "." },
 ]
+include = ["data/audio/*.mp3"]
 
 [tool.setuptools.packages.find]
 where = "."
