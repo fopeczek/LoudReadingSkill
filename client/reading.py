@@ -4,7 +4,9 @@ import time
 import tkinter as tk
 from pydub import AudioSegment
 from pydub.playback import play
+from pathlib import Path
 from threading import Thread
+import argparse
 
 from core import Scoring, score_sentence, calc_time_penalty
 from .recorder import Recorder
@@ -26,7 +28,7 @@ class ReadingApp:
     _incorrect_label: tk.Label
     _correct_label: tk.Label
 
-    def __init__(self):
+    def __init__(self, sentences_file_path: Path):
         self.started_recording = False
         self.answered_times = 0
         self.max_answers = 1  # TODO get from settings
@@ -39,7 +41,7 @@ class ReadingApp:
 
         self.connection_error_popup = False
 
-        self._scoring = Scoring()
+        self._scoring = Scoring(questions_file=sentences_file_path)
         self._recorder = Recorder()
 
         self._speech2text = Speech2Text(run_locally=False)  # TODO get from settings
@@ -349,7 +351,22 @@ class ReadingApp:
 
 
 def main():
-    app = ReadingApp()
+    parser = argparse.ArgumentParser(description="Reading App")
+    parser.add_argument(
+        "--sentences",
+        type=str,
+        default="data/sentences.txt",
+        help="Path to sentences.txt",
+    )
+    args = parser.parse_args()
+
+    # Now you can access the sentences file path with args.sentences
+    sentences_file_path = Path(args.sentences)
+    if not sentences_file_path.exists():
+        print(f"File {sentences_file_path} does not exist. ")
+
+    # Continue with your application logic
+    app = ReadingApp(sentences_file_path)
     app.window.mainloop()
 
 
