@@ -3,6 +3,7 @@ import os
 import time
 import tkinter as tk
 from pydub import AudioSegment
+from pydantic import AnyUrl
 from pydub.playback import play
 from pathlib import Path
 from threading import Thread
@@ -28,7 +29,7 @@ class ReadingApp:
     _incorrect_label: tk.Label
     _correct_label: tk.Label
 
-    def __init__(self, sentences_file_path: Path):
+    def __init__(self, sentences_file_path: Path, whisper_server_path: AnyUrl):
         self.started_recording = False
         self.answered_times = 0
         self.max_answers = 1  # TODO get from settings
@@ -44,7 +45,9 @@ class ReadingApp:
         self._scoring = Scoring(questions_file=sentences_file_path)
         self._recorder = Recorder()
 
-        self._speech2text = Speech2Text(run_locally=False)  # TODO get from settings
+        self._speech2text = Speech2Text(
+            server_url=whisper_server_path, run_locally=False
+        )  # TODO get from settings
 
         self._user_answer = None
         self._info_label = None
@@ -358,6 +361,7 @@ def main():
         default="data/sentences.txt",
         help="Path to sentences.txt",
     )
+    parser.add_argument("--whisper-server", type=str, default="192.168.42.5:8000")
     args = parser.parse_args()
 
     # Now you can access the sentences file path with args.sentences
@@ -366,7 +370,7 @@ def main():
         print(f"File {sentences_file_path} does not exist. ")
 
     # Continue with your application logic
-    app = ReadingApp(sentences_file_path)
+    app = ReadingApp(sentences_file_path, args.whisper_server)
     app.window.mainloop()
 
 
