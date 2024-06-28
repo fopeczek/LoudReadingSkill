@@ -63,10 +63,15 @@ class Score:
         }
 
 
-def check_directories():
-    Path(os.path.join(os.getcwd(), "data/audio/user")).mkdir(
-        parents=True, exist_ok=True
-    )
+# def check_directories():
+#     Path(os.path.join(os.getcwd(), "data/audio/user")).mkdir(
+#         parents=True, exist_ok=True
+#     )
+
+
+def get_resource_path(audio_file: Path | str) -> Path:
+    p = Path(__file__).parent.parent / "data" / "audio"
+    return p / audio_file
 
 
 class Scoring:
@@ -90,8 +95,6 @@ class Scoring:
         self._scores_sort = []
         self._recordings = {}
         self._total_score = TotalScore()
-
-        check_directories()
 
         self.load_answers()
         self.load_questions(questions_file)

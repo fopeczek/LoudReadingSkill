@@ -1,5 +1,4 @@
 import numpy as np
-import os
 import time
 import tkinter as tk
 from pydub import AudioSegment
@@ -9,7 +8,7 @@ from pathlib import Path
 from threading import Thread
 import argparse
 
-from core import Scoring, score_sentence, calc_time_penalty
+from core import Scoring, score_sentence, calc_time_penalty, get_resource_path
 from .recorder import Recorder
 from .speech2text import Speech2Text
 
@@ -131,7 +130,7 @@ class ReadingApp:
 
     def start_recording(self):
         self.time_taken = time.time() - self.time_start
-        song = AudioSegment.from_mp3(os.path.join(os.getcwd(), "data/audio/start.mp3"))
+        song = AudioSegment.from_mp3(get_resource_path("start.mp3"))
         Thread(target=play, args=(song,)).start()
         self._recorder.start_recording()
         self.started_recording = True
@@ -143,7 +142,7 @@ class ReadingApp:
 
     def stop_recording(self):
         self._recorder.stop_recording()
-        song = AudioSegment.from_mp3(os.path.join(os.getcwd(), "data/audio/end.mp3"))
+        song = AudioSegment.from_mp3(get_resource_path("end.mp3"))
         Thread(target=play, args=(song,)).start()
         self.started_recording = False
         self._record_button["text"] = "Start recording"
@@ -220,15 +219,11 @@ class ReadingApp:
 
         if self._scoring.update_total_scores(accuracy, speed):
             self._correct_label["text"] += " + 1"
-            song = AudioSegment.from_mp3(
-                os.path.join(os.getcwd(), "data/audio/correct.mp3")
-            )
+            song = AudioSegment.from_mp3(get_resource_path("correct.mp3"))
             Thread(target=play, args=(song,)).start()
         else:
             self._incorrect_label["text"] += " + 1"
-            song = AudioSegment.from_mp3(
-                os.path.join(os.getcwd(), "data/audio/incorrect.mp3")
-            )
+            song = AudioSegment.from_mp3(get_resource_path("incorrect.mp3"))
             Thread(target=play, args=(song,)).start()
         self._total_questions_label["text"] += " + 1"
 
