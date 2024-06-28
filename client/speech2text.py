@@ -1,5 +1,6 @@
 import requests
 from pydantic import AnyUrl
+from urllib.parse import urlparse
 
 
 class Speech2Text:
@@ -18,12 +19,15 @@ class Speech2Text:
                 self._local_model = whisper.load_model("medium")
 
         if isinstance(server_url, str):
-            server_url = AnyUrl(server_url)
+            url = urlparse(server_url)
+            if url.scheme != "http" and url.scheme != "https":
+                raise ValueError("Server URL must have http or https scheme.")
+            if url.scheme == "":
+                server_url = AnyUrl(f"http://{server_url}")
+            else:
+                server_url = AnyUrl(server_url)
+
         assert isinstance(server_url, AnyUrl)
-        if server_url.scheme != "http" and server_url.scheme != "https":
-            raise ValueError("Server URL must have http or https scheme.")
-        if server_url.scheme == "":
-            server_url = AnyUrl(f"http://{server_url}")
         self._remote_address = server_url
 
     def get_transcript(self, sound) -> (bool, str):
