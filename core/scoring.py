@@ -71,7 +71,7 @@ class Score:
 
 
 def get_resource_path(audio_file: Path | str) -> Path:
-    return importlib.resources.files("loudreadingskill") / audio_file
+    return importlib.resources.files("data.audio") / audio_file
 
 
 class Scoring:

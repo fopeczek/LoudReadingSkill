@@ -11,10 +11,8 @@ packages = [
 ]
 
 [tool.setuptools.package-data]
-loudreadingskill = ["*.mp3"]
+"data.audio" = ["*.mp3"]
 
-[tool.setuptools.packages.find]
-where = ["data/audio"]
 
 [tool.poetry.dependencies]
 python = "^3.11"
