@@ -5,6 +5,7 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import datetime
+import importlib.resources
 
 import numpy as np
 from .voice_sample import VoiceSample
@@ -70,8 +71,9 @@ class Score:
 
 
 def get_resource_path(audio_file: Path | str) -> Path:
-    p = Path(__file__).parent.parent / "data" / "audio"
-    return p / audio_file
+    return (
+        Path(str(importlib.resources.files("loudreadingskill.data.audio"))) / audio_file
+    )
 
 
 class Scoring:
