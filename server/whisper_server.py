@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import whisper
-from core.voice_sample import VoiceSample
+from ..core.voice_sample import VoiceSample
 
 app = FastAPI()
 
@@ -12,7 +12,9 @@ class Transcribe:
         self._model = whisper.load_model("medium")
 
     def get_transcript(self, sound: VoiceSample) -> str:
-        return self._model.transcribe(sound.get_sample_as_np_array(), language='pl')['text'].strip()
+        return self._model.transcribe(sound.get_sample_as_np_array(), language="pl")[
+            "text"
+        ].strip()
 
 
 @app.get("/request/")
