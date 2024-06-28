@@ -13,10 +13,14 @@ class Speech2Text:
 
     def get_transcript(self, sound) -> (bool, str):
         if self.run_locally:
-            return True, self.local_model.transcribe(sound.get_sample_as_np_array(), language='pl')['text'].strip()
+            return True, self.local_model.transcribe(
+                sound.get_sample_as_np_array(), language="pl"
+            )["text"].strip()
         else:
             try:
-                return True, requests.get("http://localhost:8000/request/", data=sound.json()).text.strip()
+                return True, requests.get(
+                    "http://localhost:8000/request/", data=sound.json()
+                ).text.strip()
             except requests.exceptions.ConnectionError:
                 return False, "Could not connect to the server. "
 
@@ -25,6 +29,7 @@ class Speech2Text:
             return True
         try:
             out = requests.get("http://localhost:8000/request/", data={}).text
+            print(out)
             return True
         except requests.exceptions.ConnectionError:
             return False

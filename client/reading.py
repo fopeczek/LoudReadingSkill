@@ -8,7 +8,7 @@ import os
 
 from ..core.scoring import Scoring, score_sentence, calc_time_penalty
 from .recorder import Recorder
-from speech2text import Speech2Text
+from gi.speech2text import Speech2Text
 
 
 class ReadingApp:
