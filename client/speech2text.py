@@ -1,5 +1,4 @@
 import requests
-import whisper
 
 
 class Speech2Text:
@@ -8,6 +7,10 @@ class Speech2Text:
 
     def __init__(self, run_locally=False):
         self.run_locally = run_locally
+        try:
+            import whisper
+        except ImportError:
+            run_locally = True
         if self.run_locally:
             self.local_model = whisper.load_model("medium")
 
