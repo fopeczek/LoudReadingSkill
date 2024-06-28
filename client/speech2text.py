@@ -17,6 +17,9 @@ class Speech2Text:
             if self._run_locally:
                 self._local_model = whisper.load_model("medium")
 
+        if isinstance(server_url, str):
+            server_url = AnyUrl(server_url)
+        assert isinstance(server_url, AnyUrl)
         if server_url.scheme != "http" and server_url.scheme != "https":
             raise ValueError("Server URL must have http or https scheme.")
         if server_url.scheme == "":
