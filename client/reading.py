@@ -1,10 +1,10 @@
-import tkinter as tk
+import numpy as np
+import os
 import time
+import tkinter as tk
 from pydub import AudioSegment
 from pydub.playback import play
 from threading import Thread
-import numpy as np
-import os
 
 from core import Scoring, score_sentence, calc_time_penalty
 from .recorder import Recorder

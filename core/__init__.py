@@ -1,3 +1,6 @@
-from .scoring import Scoring, score_sentence, calc_time_penalty
-
-__all__ = ["Scoring", "score_sentence", "calc_time_penalty"]
+from .scoring import (
+    Scoring as Scoring,
+    score_sentence as score_sentence,
+    calc_time_penalty as calc_time_penalty,
+)
+from .voice_sample import VoiceSample as VoiceSample
