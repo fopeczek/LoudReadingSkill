@@ -1,5 +1,9 @@
 set fallback
 
+[private]
+help:
+  just --list
+
 # Installs remote dependencies.
 dep:
   #!/usr/bin/env bash
@@ -68,3 +72,8 @@ check arg="dirty": install-pre-commit
   else
     pre-commit run
   fi
+
+run:
+  #!/usr/bin/env bash
+  set -euo pipefail
+  poetry run python -m {{args}}
