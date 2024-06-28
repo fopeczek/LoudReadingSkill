@@ -40,7 +40,7 @@ class VoiceSample(BaseModel):
             audio_segment = audio_segment.set_frame_rate(16000)
         arr = np.array(audio_segment.get_array_of_samples())
         arr = arr.astype(np.float32) / 32768.0
-        return arr
+        return arr / np.max(np.abs(arr))
 
     def ResampledClone(self, frame_rate: int = 16000) -> VoiceSample:
         audio_segment = AudioSegment(

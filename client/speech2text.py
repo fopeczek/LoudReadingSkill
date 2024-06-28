@@ -20,8 +20,10 @@ class Speech2Text:
 
         if isinstance(server_url, str):
             url = urlparse(server_url)
-            if url.scheme != "http" and url.scheme != "https":
-                raise ValueError("Server URL must have http or https scheme.")
+            if url.scheme != "http" and url.scheme != "https" and url.scheme != "":
+                raise ValueError(
+                    f"Server URL must have http or https scheme, not {url.scheme}."
+                )
             if url.scheme == "":
                 server_url = AnyUrl(f"http://{server_url}")
             else:

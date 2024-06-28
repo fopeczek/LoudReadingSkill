@@ -1,14 +1,19 @@
 from fastapi import FastAPI
-import whisper
 from ..core.voice_sample import VoiceSample
 
 app = FastAPI()
 
 
 class Transcribe:
-    _model: whisper.model
+    _model: "whisper.model"  # noqa: F821
 
     def __init__(self):
+        try:
+            import whisper
+        except ImportError:
+            raise ImportError(
+                "In order to run the server, you need to have whisper installed locally."
+            )
         self._model = whisper.load_model("medium")
 
     def get_transcript(self, sound: VoiceSample) -> str:
@@ -31,8 +36,15 @@ async def root():
 
 
 def init():
+    try:
+        import whisper  # noqa: F401
+    except ImportError:
+        print("In order to run the server, you need to have whisper installed locally.")
+        return
+
     global transcribe
     transcribe = Transcribe()
 
 
-init()
+if __name__ == "__main__":
+    init()
