@@ -10,6 +10,12 @@ packages = [
     { include = "core", from = "." },
 ]
 
+[tool.setuptools.package-data]
+loudreadingskill = ["*.mp3"]
+
+[tool.setuptools.packages.find]
+where = ["data/audio"]
+
 [tool.poetry.dependencies]
 python = "^3.11"
 pillow = "^10.3.0"
