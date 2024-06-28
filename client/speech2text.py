@@ -11,11 +11,11 @@ class Speech2Text:
         if self.run_locally:
             self.local_model = whisper.load_model("medium")
 
-    def get_transcript(self, sound) -> str:
+    def get_transcript(self, sound) -> (bool, str):
         if self.run_locally:
-            return self.local_model.transcribe(sound.get_sample_as_np_array(), language='pl')['text'].strip()
+            return True, self.local_model.transcribe(sound.get_sample_as_np_array(), language='pl')['text'].strip()
         else:
             try:
-                return requests.get("http://localhost:8000/request/", data=sound.json()).text.strip()
+                return True, requests.get("http://localhost:8000/request/", data=sound.json()).text.strip()
             except requests.exceptions.ConnectionError:
-                raise ConnectionError("Could not connect to the server")
+                return False, "Could not connect to the server. "

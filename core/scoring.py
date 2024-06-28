@@ -44,8 +44,8 @@ class Scoring:
     _total_scores_file: str
     _scoring_settings: dict[str, float]
 
-    def __init__(self, questions_file: str = "sentences.txt", answers_file: str = "answers.json",
-                 total_scores_file: str = "scores.json", settings_file: str = "settings.json"):
+    def __init__(self, questions_file: str = "data/sentences.txt", answers_file: str = "data/answers.json",
+                 total_scores_file: str = "data/scores.json", settings_file: str = "data/settings.json"):
         self._answers_file = answers_file
         self._total_scores_file = total_scores_file
         self._answers = {}

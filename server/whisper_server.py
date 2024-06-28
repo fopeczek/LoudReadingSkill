@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 import whisper
-from voice_sample import VoiceSample
+from core.voice_sample import VoiceSample
 
 app = FastAPI()
 
