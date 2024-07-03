@@ -22,6 +22,7 @@ class ConfigData:
     answers_file: Path = Path("data/answers.json")
     scores_file: Path = Path("data/scores.json")
     recordings_directory: Path = Path("data/audio/user")
+    whisper_model: str = "auto"
 
     @staticmethod
     def FromDict(d: dict):
@@ -39,6 +40,7 @@ class ConfigData:
             Path(d["answers file"]),
             Path(d["scores file"]),
             Path(d["user recordings directory"]),
+            d["whisper model"],
         )
 
     def dict(self):
@@ -56,6 +58,7 @@ class ConfigData:
             "answers file": str(self.answers_file),
             "scores file": str(self.scores_file),
             "user recordings directory": str(self.recordings_directory),
+            "whisper model": self.whisper_model,
         }
 
 
