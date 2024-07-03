@@ -50,7 +50,6 @@ class Speech2Text:
             return True
         try:
             out = requests.get(f"{self._remote_address}/request/", data={}).text
-            print(out)
-            return True
+            return out != ""
         except requests.exceptions.ConnectionError:
             return False

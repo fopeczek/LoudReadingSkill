@@ -1,3 +1,5 @@
+import os
+
 import numpy as np
 import time
 import tkinter as tk
@@ -9,8 +11,8 @@ from threading import Thread
 import argparse
 
 from core import Scoring, score_sentence, calc_time_penalty, get_resource_path
-from .recorder import Recorder
-from .speech2text import Speech2Text
+from recorder import Recorder
+from speech2text import Speech2Text
 
 
 class ReadingApp:
@@ -49,6 +51,7 @@ class ReadingApp:
         )  # TODO get from settings
 
         self._user_answer = None
+        self._replay_last_button = None
         self._info_label = None
 
         self._window = tk.Tk()
@@ -120,7 +123,7 @@ class ReadingApp:
 
     def toggle_recording(self, event):
         if (
-            event.keysym == "space" or event.widget == self._record_button
+                event.keysym == "space" or event.widget == self._record_button
         ) and not self.connection_error_popup:
             if not self.started_recording:
                 if self.answered_times < self.max_answers:
@@ -190,10 +193,22 @@ class ReadingApp:
         self._user_answer.delete("1.0", tk.END)
         self._user_answer.insert(tk.END, transcript, "center")
         self._user_answer.tag_configure("center", justify="center")
-        self._user_answer.grid(row=8, column=0, columnspan=2, pady=10)
+        self._user_answer.grid(row=8, column=0, columnspan=3, pady=10)
+        self._replay_last_button = tk.Button(self._window, text="Replay last recording")
+        self._replay_last_button.configure(background="black", foreground="white")
+        self._replay_last_button.configure(
+            activebackground="black", activeforeground="white"
+        )
+        self._replay_last_button.bind("<ButtonPress>", self.replay_last_recording)
+        self._replay_last_button.grid(row=9, column=0, columnspan=3)
         self.update_window_size()
 
         self.check_answer(transcript)
+
+    def replay_last_recording(self, event):
+        files = next(os.walk("data/audio/user"), (None, None, []))[2]
+        song = AudioSegment.from_wav(f"data/audio/user/{files[-1]}")
+        Thread(target=play, args=(song + 30,)).start()
 
     def insert_colored_text(self, html_text):
         import re
@@ -203,7 +218,7 @@ class ReadingApp:
         self._question_text.config(state="normal")
         self._question_text.delete("1.0", tk.END)
         for match in pattern.finditer(html_text):
-            self._question_text.insert(tk.END, html_text[last_end : match.start()])
+            self._question_text.insert(tk.END, html_text[last_end: match.start()])
             self._question_text.insert(tk.END, match.group(1), "highlight")
             last_end = match.end()
         self._question_text.insert(tk.END, html_text[last_end:], "center")
@@ -242,8 +257,10 @@ class ReadingApp:
             if self._user_answer is not None:
                 self._user_answer.destroy()
                 self._user_answer = None
+            if self._replay_last_button is not None:
+                self._replay_last_button.destroy()
+                self._replay_last_button = None
             self.time_start = time.time()
-            self.update_window_size()
 
             self._accuracy_score_label["text"] = (
                 f"Accuracy score: {self._scoring.total_scores().accuracy}"
@@ -266,11 +283,14 @@ class ReadingApp:
             self.rerolled += 1
             self._record_button["state"] = "normal"
             self._next_question_button["state"] = "disabled"
+            self.update_window_size()
 
     def update_window_size(self):
         lines = np.ceil(len(self.current_sentence) / 80)
         if self._user_answer is not None:
             lines += np.ceil(len(self._user_answer.get("1.0", tk.END)) / 80)
+        if self.answered_times > 0:
+            lines += 2
         self._window.geometry(f"800x{int(250 + 20 * lines)}")
 
     def check_speech2text(self):

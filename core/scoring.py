@@ -8,6 +8,7 @@ import datetime
 
 import numpy as np
 from .voice_sample import VoiceSample
+from .util import create_and_load_file, just_letters
 
 
 @dataclass
@@ -85,15 +86,13 @@ class Scoring:
     _scores_sort: list[(Score, str)]
     _total_score: TotalScore
     _total_scores_file: Path
-    _scoring_settings: dict[str, float]
     _story_mode: bool
 
     def __init__(
         self,
-        questions_file: Path = "data/sentences.txt",
-        answers_file: Path = "data/answers.json",
-        total_scores_file: Path = "data/scores.json",
-        settings_file: Path = "data/settings.json",
+        questions_file: Path = os.path.join(os.getcwd(), "data/sentences.txt"),
+        answers_file: Path = os.path.join(os.getcwd(), "data/answers.json"),
+        total_scores_file: Path = os.path.join(os.getcwd(), "data/scores.json"),
         story_mode: bool = True,
     ):
         self._answers_file = answers_file
@@ -109,7 +108,6 @@ class Scoring:
         self.load_answers()
         self.load_questions(questions_file)
         self.load_total_scores()
-        self.load_settings(settings_file)
         heapq.heapify(self._scores_sort)
 
     def load_answers(self):
@@ -132,9 +130,6 @@ class Scoring:
         self._total_score = TotalScore.FromDict(
             create_and_load_file(self._total_scores_file, self._total_score.dict())
         )
-
-    def load_settings(self, settings_file: Path):
-        pass
 
     def get_next_sentence(self) -> str:
         if self._story_mode:
@@ -183,27 +178,6 @@ class Scoring:
             jsonobj = json.dumps(self._total_score.dict(), indent=4)
             fw.write(jsonobj)
         return correct
-
-
-def create_and_load_file(file_name: Path, default_content):
-    try:
-        with open(file_name, "r") as fr:
-            try:
-                return json.load(fr)
-            except json.JSONDecodeError:
-                with open(file_name, "w") as fw:
-                    jsonobj = json.dumps(default_content, indent=4)
-                    fw.write(jsonobj)
-    except FileNotFoundError:
-        with open(file_name, "w") as fw:
-            jsonobj = json.dumps(default_content, indent=4)
-            fw.write(jsonobj)
-    return default_content
-
-
-def just_letters(s: str) -> str:
-    return " ".join(s.lower().translate(str.maketrans("", "", "!?.,;:-")).split())
-
 
 def calculate_timeout_from_sentence(sentence: str) -> float:
     return len(just_letters(sentence)) / 5 + 4
