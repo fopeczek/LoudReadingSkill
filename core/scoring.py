@@ -5,7 +5,6 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import datetime
-from typing import Tuple
 
 import numpy as np
 from core import create_and_load_file, just_letters, VoiceSample, Config
@@ -28,7 +27,7 @@ class TotalScore:
             d["correct"],
             d["incorrect"],
             d["total_questions"],
-            d["story_index"],
+            d.get("story_index", 0),
         )
 
     def dict(self):
@@ -87,8 +86,8 @@ class Scoring:
     _config: Config
 
     def __init__(
-            self,
-            config: Config,
+        self,
+        config: Config,
     ):
         self._config = config
         self._answers = {}
@@ -105,7 +104,9 @@ class Scoring:
     def load_answers(self):
         self._answers = {
             sentence: Score.FromDict(score)
-            for sentence, score in create_and_load_file(self._config.get_config().answers_file, {}).items()
+            for sentence, score in create_and_load_file(
+                self._config.get_config().answers_file, {}
+            ).items()
         }
         self._scores_sort = [
             (score, sentence) for sentence, score in self._answers.items()
@@ -120,7 +121,9 @@ class Scoring:
 
     def load_total_scores(self):
         self._total_score = TotalScore.FromDict(
-            create_and_load_file(self._config.get_config().scores_file, self._total_score.dict())
+            create_and_load_file(
+                self._config.get_config().scores_file, self._total_score.dict()
+            )
         )
 
     def get_next_sentence(self) -> str:
@@ -131,7 +134,7 @@ class Scoring:
             return heapq.heappop(self._scores_sort)[1]
 
     def set_sentence_answer(
-            self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
+        self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
     ):
         score = Score(accuracy_score, time_score, user_answer, datetime.datetime.now())
         self._answers[sentence] = score
@@ -161,13 +164,17 @@ class Scoring:
         self._total_score.speed = np.round(self._total_score.speed, 2)
         correct = False
         incorrect = False
-        if (accuracy >= self._config.get_config().correct_min_accuracy and
-                speed >= self._config.get_config().correct_min_speed):
+        if (
+            accuracy >= self._config.get_config().correct_min_accuracy
+            and speed >= self._config.get_config().correct_min_speed
+        ):
             self._total_score.correct += 1
             self._total_score.story_index += 1
             correct = True
-        elif (accuracy < self._config.get_config().incorrect_max_accuracy or
-              speed < self._config.get_config().incorrect_max_speed):
+        elif (
+            accuracy < self._config.get_config().incorrect_max_accuracy
+            or speed < self._config.get_config().incorrect_max_speed
+        ):
             self._total_score.incorrect += 1
             incorrect = True
         self._total_score.total_questions += 1
@@ -211,7 +218,7 @@ def score_sentence(correct_sentence: str, user_sentence: str) -> tuple[float, st
     left_word_pos_idx = 0
     sequence_pos = 0
     words = [True] * (
-            len(correct_spaces) - 1
+        len(correct_spaces) - 1
     )  # Each word will get a True if was correctly read, or False if not
 
     correct_pos_left = mb[sequence_pos].a

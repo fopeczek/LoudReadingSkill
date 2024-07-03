@@ -8,8 +8,8 @@ from pydub.playback import play
 from threading import Thread
 
 from core import Scoring, score_sentence, calc_time_penalty, get_resource_path, Config
-from recorder import Recorder
-from speech2text import Speech2Text
+from .recorder import Recorder
+from .speech2text import Speech2Text
 
 
 class ReadingApp:
@@ -43,8 +43,10 @@ class ReadingApp:
 
         self.connection_error_popup = False
 
-        self._speech2text = Speech2Text(server_url=self._config.get_config().whisper_host,
-                                        run_locally=self._config.get_config().run_whisper_locally)
+        self._speech2text = Speech2Text(
+            server_url=self._config.get_config().whisper_host,
+            run_locally=self._config.get_config().run_whisper_locally,
+        )
 
         self._user_answer = None
         self._replay_last_button = None
@@ -119,10 +121,13 @@ class ReadingApp:
 
     def toggle_recording(self, event):
         if (
-                event.keysym == "space" or event.widget == self._record_button
+            event.keysym == "space" or event.widget == self._record_button
         ) and not self.connection_error_popup:
             if not self.started_recording:
-                if self.answered_times < self._config.get_config().max_answers_per_question:
+                if (
+                    self.answered_times
+                    < self._config.get_config().max_answers_per_question
+                ):
                     self.start_recording()
             else:
                 self.stop_recording()
@@ -202,8 +207,12 @@ class ReadingApp:
         self.check_answer(transcript)
 
     def replay_last_recording(self, event=None):
-        files = next(os.walk(self._config.get_config().recordings_directory), (None, None, []))[2]
-        song = AudioSegment.from_wav(f"{self._config.get_config().recordings_directory}/{files[-1]}")
+        files = next(
+            os.walk(self._config.get_config().recordings_directory), (None, None, [])
+        )[2]
+        song = AudioSegment.from_wav(
+            f"{self._config.get_config().recordings_directory}/{files[-1]}"
+        )
         Thread(target=play, args=(song + 30,)).start()
 
     def insert_colored_text(self, html_text):
@@ -214,7 +223,7 @@ class ReadingApp:
         self._question_text.config(state="normal")
         self._question_text.delete("1.0", tk.END)
         for match in pattern.finditer(html_text):
-            self._question_text.insert(tk.END, html_text[last_end: match.start()])
+            self._question_text.insert(tk.END, html_text[last_end : match.start()])
             self._question_text.insert(tk.END, match.group(1), "highlight")
             last_end = match.end()
         self._question_text.insert(tk.END, html_text[last_end:], "center")
@@ -345,8 +354,10 @@ class ReadingApp:
         loading = self.loading_popup("Loading", "Loading... ")
         self._config.get_config().run_whisper_locally = True
         self._config.save_config()
-        self._speech2text.__init__(server_url=self._config.get_config().whisper_host,
-                                   run_locally=self._config.get_config().run_whisper_locally)
+        self._speech2text.__init__(
+            server_url=self._config.get_config().whisper_host,
+            run_locally=self._config.get_config().run_whisper_locally,
+        )
         self.time_start = time.time()
         loading.destroy()
         self.close_connection_error_popup(popup)
