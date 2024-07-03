@@ -1,16 +1,11 @@
-import os
 from pathlib import Path
-import json
 
-from dataclasses import dataclass
-
-from pydantic import AnyUrl
+from pydantic import AnyUrl, BaseModel
 
 from core import create_and_load_file
 
 
-@dataclass
-class ConfigData:
+class ConfigData(BaseModel):
     story_mode: bool = True
     correct_min_accuracy: float = 0.8
     correct_min_speed: float = 0.5
@@ -25,41 +20,6 @@ class ConfigData:
     scores_file: Path = Path("data/scores.json")
     recordings_directory: Path = Path("data/audio/user")
 
-    @staticmethod
-    def FromDict(d: dict):
-        return ConfigData(
-            d["story mode"],
-            d["correct min accuracy"],
-            d["correct min speed"],
-            d["incorrect max accuracy"],
-            d["incorrect max speed"],
-            d["max answers per question"],
-            d["max new question rolls"],
-            d["run whisper locally"],
-            AnyUrl(d["whisper host"]),
-            Path(d["questions file"]),
-            Path(d["answers file"]),
-            Path(d["scores file"]),
-            Path(d["user recordings directory"]),
-        )
-
-    def dict(self):
-        return {
-            "story mode": self.story_mode,
-            "correct min accuracy": self.correct_min_accuracy,
-            "correct min speed": self.correct_min_speed,
-            "incorrect max accuracy": self.incorrect_max_accuracy,
-            "incorrect max speed": self.incorrect_max_speed,
-            "max answers per question": self.max_answers_per_question,
-            "max new question rolls": self.max_new_question_rolls,
-            "run whisper locally": self.run_whisper_locally,
-            "whisper host": str(self.whisper_host),
-            "questions file": str(self.questions_file),
-            "answers file": str(self.answers_file),
-            "scores file": str(self.scores_file),
-            "user recordings directory": str(self.recordings_directory),
-        }
-
 
 class Config:
     _config_path: Path
@@ -71,11 +31,15 @@ class Config:
         self.load_config()
 
     def load_config(self):
-        self._config_data = ConfigData.FromDict(create_and_load_file(self._config_path, self._config_data.dict()))
+        if not self._config_path.exists():
+            self.save_config()
+
+        self._config_data = ConfigData(**create_and_load_file(self._config_path, {}))
 
     def save_config(self):
         with open(self._config_path, "w") as f:
-            f.write(json.dumps(self._config_data.dict(), indent=4))
+            json_dump = self._config_data.model_dump_json(indent=4)
+            f.write(json_dump)
 
     def get_config(self) -> ConfigData:
         return self._config_data

@@ -5,40 +5,19 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import datetime
+from pydantic import BaseModel
 
 import numpy as np
 from core import create_and_load_file, just_letters, VoiceSample, Config
 
 
-@dataclass
-class TotalScore:
+class TotalScore(BaseModel):
     accuracy: float = 0.0
     speed: float = 0.0
     correct: float = 0.0
     incorrect: float = 0.0
     total_questions: float = 0.0
     story_index: int = 0
-
-    @staticmethod
-    def FromDict(d: dict):
-        return TotalScore(
-            d["accuracy"],
-            d["speed"],
-            d["correct"],
-            d["incorrect"],
-            d["total_questions"],
-            d["story_index"],
-        )
-
-    def dict(self):
-        return {
-            "accuracy": self.accuracy,
-            "speed": self.speed,
-            "correct": self.correct,
-            "incorrect": self.incorrect,
-            "total_questions": self.total_questions,
-            "story_index": self.story_index,
-        }
 
 
 @dataclass(order=True)
@@ -120,9 +99,10 @@ class Scoring:
                 self._scores_sort.append((Score(), sentence))
 
     def load_total_scores(self):
-        self._total_score = TotalScore.FromDict(
-            create_and_load_file(
-                self._config.get_config().scores_file, self._total_score.dict()
+        self._total_score = TotalScore(
+            **create_and_load_file(
+                self._config.get_config().scores_file,
+                self._total_score.model_dump_json(),
             )
         )
 
@@ -179,8 +159,8 @@ class Scoring:
             incorrect = True
         self._total_score.total_questions += 1
         with open(self._config.get_config().scores_file, "w") as fw:
-            jsonobj = json.dumps(self._total_score.dict(), indent=4)
-            fw.write(jsonobj)
+            json_dump = self._total_score.model_dump_json(indent=4)
+            fw.write(json_dump)
         return correct, incorrect
 
 
