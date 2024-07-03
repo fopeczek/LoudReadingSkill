@@ -1,12 +1,10 @@
-import os
-from pathlib import Path
 import json
-
 from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic import AnyUrl
 
-from core import create_and_load_file
+from .util import create_and_load_file
 
 
 @dataclass
@@ -71,7 +69,9 @@ class Config:
         self.load_config()
 
     def load_config(self):
-        self._config_data = ConfigData.FromDict(create_and_load_file(self._config_path, self._config_data.dict()))
+        self._config_data = ConfigData.FromDict(
+            create_and_load_file(self._config_path, self._config_data.dict())
+        )
 
     def save_config(self):
         with open(self._config_path, "w") as f:

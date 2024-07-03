@@ -1,4 +1,7 @@
-from .util import create_and_load_file as create_and_load_file, just_letters as just_letters
+from .util import (
+    create_and_load_file as create_and_load_file,
+    just_letters as just_letters,
+)
 
 from .config import Config as Config
 
@@ -10,5 +13,3 @@ from .scoring import (
     calc_time_penalty as calc_time_penalty,
     get_resource_path as get_resource_path,
 )
-
-from .config import Config as Config
