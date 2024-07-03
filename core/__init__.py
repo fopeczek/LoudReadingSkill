@@ -13,3 +13,8 @@ from .scoring import (
     calc_time_penalty as calc_time_penalty,
     get_resource_path as get_resource_path,
 )
+
+from .local_whisper import (
+    get_max_gpu_memory as get_max_gpu_memory,
+    guess_whisper_model as guess_whisper_model,
+)
