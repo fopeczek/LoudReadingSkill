@@ -76,4 +76,4 @@ check arg="dirty": install-pre-commit
 run:
   #!/usr/bin/env bash
   set -euo pipefail
-  poetry run python -m {{args}}
+  poetry run loudreading_client

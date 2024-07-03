@@ -1,14 +1,22 @@
 [tool.poetry]
 name = "loudreadingskill"
-version = "1.0.0"
+version = "1.1.0"
 description = ""
 authors = ["Silent <mikolaj@statystyka.net>"]
 readme = "README.md"
 packages = [
     { include = "client", from = "." },
     { include = "server", from = "." },
-    { include = "core", from = "." }
+    { include = "core", from = "." },
 ]
+include = ["data/audio/*.mp3"]
+
+[tool.setuptools.packages.find]
+where = "."
+
+[tool.setuptools.package-data]
+"data.audio" = ["*.mp3"]
+
 
 [tool.poetry.dependencies]
 python = "^3.11"

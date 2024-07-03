@@ -72,22 +72,29 @@ def check_directories():
     )
 
 
+def get_resource_path(audio_file: Path | str) -> Path:
+    current_file_path = Path(__file__)
+    project_root = current_file_path.parent.parent
+    return project_root / "data" / "audio" / audio_file
+    # return files("data.audio") / audio_file
+
+
 class Scoring:
     _answers: dict[str, Score]
-    _answers_file: str
+    _answers_file: Path
     _scores_sort: list[(Score, str)]
     _total_score: TotalScore
-    _total_scores_file: str
+    _total_scores_file: Path
     _scoring_settings: dict[str, float]
     _story_mode: bool
 
     def __init__(
-            self,
-            questions_file: str = "data/sentences.txt",
-            answers_file: str = "data/answers.json",
-            total_scores_file: str = "data/scores.json",
-            settings_file: str = "data/settings.json",
-            story_mode: bool = True,
+        self,
+        questions_file: Path = "data/sentences.txt",
+        answers_file: Path = "data/answers.json",
+        total_scores_file: Path = "data/scores.json",
+        settings_file: Path = "data/settings.json",
+        story_mode: bool = True,
     ):
         self._answers_file = answers_file
         self._total_scores_file = total_scores_file
@@ -114,7 +121,7 @@ class Scoring:
             (score, sentence) for sentence, score in self._answers.items()
         ]
 
-    def load_questions(self, questions_file: str):
+    def load_questions(self, questions_file: Path):
         for line in open(questions_file):
             sentence = line.strip()
             if sentence not in self._answers:
@@ -126,7 +133,7 @@ class Scoring:
             create_and_load_file(self._total_scores_file, self._total_score.dict())
         )
 
-    def load_settings(self, settings_file: str):
+    def load_settings(self, settings_file: Path):
         pass
 
     def get_next_sentence(self) -> str:
@@ -137,7 +144,7 @@ class Scoring:
             return heapq.heappop(self._scores_sort)[1]
 
     def set_sentence_answer(
-            self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
+        self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
     ):
         score = Score(accuracy_score, time_score, user_answer, datetime.datetime.now())
         self._answers[sentence] = score
@@ -178,7 +185,7 @@ class Scoring:
         return correct
 
 
-def create_and_load_file(file_name: str, default_content):
+def create_and_load_file(file_name: Path, default_content):
     try:
         with open(file_name, "r") as fr:
             try:

@@ -1,14 +1,16 @@
-import tkinter as tk
-import time
-from pydub import AudioSegment
-from pydub.playback import play
-from threading import Thread
 import numpy as np
-import os
+import time
+import tkinter as tk
+from pydub import AudioSegment
+from pydantic import AnyUrl
+from pydub.playback import play
+from pathlib import Path
+from threading import Thread
+import argparse
 
-from core.scoring import Scoring, score_sentence, calc_time_penalty
-from recorder import Recorder
-from speech2text import Speech2Text
+from core import Scoring, score_sentence, calc_time_penalty, get_resource_path
+from .recorder import Recorder
+from .speech2text import Speech2Text
 
 
 class ReadingApp:
@@ -26,7 +28,7 @@ class ReadingApp:
     _incorrect_label: tk.Label
     _correct_label: tk.Label
 
-    def __init__(self):
+    def __init__(self, sentences_file_path: Path, whisper_server_path: AnyUrl):
         self.started_recording = False
         self.answered_times = 0
         self.max_answers = 1  # TODO get from settings
@@ -39,10 +41,12 @@ class ReadingApp:
 
         self.connection_error_popup = False
 
-        self._scoring = Scoring()
+        self._scoring = Scoring(questions_file=sentences_file_path)
         self._recorder = Recorder()
 
-        self._speech2text = Speech2Text(run_locally=False)  # TODO get from settings
+        self._speech2text = Speech2Text(
+            server_url=whisper_server_path, run_locally=False
+        )  # TODO get from settings
 
         self._user_answer = None
         self._info_label = None
@@ -126,7 +130,7 @@ class ReadingApp:
 
     def start_recording(self):
         self.time_taken = time.time() - self.time_start
-        song = AudioSegment.from_mp3(os.path.join(os.getcwd(), "data/audio/start.mp3"))
+        song = AudioSegment.from_mp3(get_resource_path("start.mp3"))
         Thread(target=play, args=(song,)).start()
         self._recorder.start_recording()
         self.started_recording = True
@@ -138,7 +142,7 @@ class ReadingApp:
 
     def stop_recording(self):
         self._recorder.stop_recording()
-        song = AudioSegment.from_mp3(os.path.join(os.getcwd(), "data/audio/end.mp3"))
+        song = AudioSegment.from_mp3(get_resource_path("end.mp3"))
         Thread(target=play, args=(song,)).start()
         self.started_recording = False
         self._record_button["text"] = "Start recording"
@@ -215,15 +219,11 @@ class ReadingApp:
 
         if self._scoring.update_total_scores(accuracy, speed):
             self._correct_label["text"] += " + 1"
-            song = AudioSegment.from_mp3(
-                os.path.join(os.getcwd(), "data/audio/correct.mp3")
-            )
+            song = AudioSegment.from_mp3(get_resource_path("correct.mp3"))
             Thread(target=play, args=(song,)).start()
         else:
             self._incorrect_label["text"] += " + 1"
-            song = AudioSegment.from_mp3(
-                os.path.join(os.getcwd(), "data/audio/incorrect.mp3")
-            )
+            song = AudioSegment.from_mp3(get_resource_path("incorrect.mp3"))
             Thread(target=play, args=(song,)).start()
         self._total_questions_label["text"] += " + 1"
 
@@ -305,6 +305,10 @@ class ReadingApp:
         )
         button_run_locally.configure(background="black", foreground="white")
         button_run_locally.grid(row=1, column=0)
+        try:
+            import whisper  # noqa F401
+        except ImportError:
+            button_run_locally["state"] = "disabled"
         button_exit = tk.Button(
             popup, text="Ok", command=lambda: self.close_connection_error_popup(popup)
         )
@@ -349,7 +353,23 @@ class ReadingApp:
 
 
 def main():
-    app = ReadingApp()
+    parser = argparse.ArgumentParser(description="Reading App")
+    parser.add_argument(
+        "--sentences",
+        type=str,
+        default="data/sentences.txt",
+        help="Path to sentences.txt",
+    )
+    parser.add_argument("--whisper-server", type=str, default="192.168.42.5:8000")
+    args = parser.parse_args()
+
+    # Now you can access the sentences file path with args.sentences
+    sentences_file_path = Path(args.sentences)
+    if not sentences_file_path.exists():
+        print(f"File {sentences_file_path} does not exist. ")
+
+    # Continue with your application logic
+    app = ReadingApp(sentences_file_path, args.whisper_server)
     app.window.mainloop()
 
 
