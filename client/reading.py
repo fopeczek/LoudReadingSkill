@@ -4,13 +4,10 @@ import numpy as np
 import time
 import tkinter as tk
 from pydub import AudioSegment
-from pydantic import AnyUrl
 from pydub.playback import play
-from pathlib import Path
 from threading import Thread
-import argparse
 
-from core import Scoring, score_sentence, calc_time_penalty, get_resource_path
+from core import Scoring, score_sentence, calc_time_penalty, get_resource_path, Config
 from recorder import Recorder
 from speech2text import Speech2Text
 
@@ -19,6 +16,7 @@ class ReadingApp:
     _scoring: Scoring
     _recorder: Recorder
     _speech2text: Speech2Text
+    _config: Config
 
     _window: tk.Tk
     _question_text: tk.Text
@@ -30,12 +28,14 @@ class ReadingApp:
     _incorrect_label: tk.Label
     _correct_label: tk.Label
 
-    def __init__(self, sentences_file_path: Path, whisper_server_path: AnyUrl):
+    def __init__(self):
+        self._config = Config()
+        self._scoring = Scoring(self._config)
+        self._recorder = Recorder()
+
         self.started_recording = False
         self.answered_times = 0
-        self.max_answers = 1  # TODO get from settings
         self.rerolled = 0
-        self.max_rerolls = 1  # TODO get from settings
 
         self.current_sentence = None
         self.time_start = 0.0
@@ -43,12 +43,8 @@ class ReadingApp:
 
         self.connection_error_popup = False
 
-        self._scoring = Scoring(questions_file=sentences_file_path)
-        self._recorder = Recorder()
-
-        self._speech2text = Speech2Text(
-            server_url=whisper_server_path, run_locally=False
-        )  # TODO get from settings
+        self._speech2text = Speech2Text(server_url=self._config.get_config().whisper_host,
+                                        run_locally=self._config.get_config().run_whisper_locally)
 
         self._user_answer = None
         self._replay_last_button = None
@@ -66,7 +62,7 @@ class ReadingApp:
         self._question_text = tk.Text(self._window, height=1, width=80, wrap="word")
         self._question_text.configure(background="black", foreground="white")
         self._question_text.tag_configure("center", justify="center")
-        self._question_text.tag_config("highlight", foreground="red", justify="center")
+        self._question_text.tag_config("highlight", justify="center", foreground="red")
         self._question_text.grid(row=0, column=0, columnspan=3, pady=20)
 
         self._record_button = tk.Button(self._window, text="Start recording")
@@ -126,7 +122,7 @@ class ReadingApp:
                 event.keysym == "space" or event.widget == self._record_button
         ) and not self.connection_error_popup:
             if not self.started_recording:
-                if self.answered_times < self.max_answers:
+                if self.answered_times < self._config.get_config().max_answers_per_question:
                     self.start_recording()
             else:
                 self.stop_recording()
@@ -205,9 +201,9 @@ class ReadingApp:
 
         self.check_answer(transcript)
 
-    def replay_last_recording(self, event):
-        files = next(os.walk("data/audio/user"), (None, None, []))[2]
-        song = AudioSegment.from_wav(f"data/audio/user/{files[-1]}")
+    def replay_last_recording(self, event=None):
+        files = next(os.walk(self._config.get_config().recordings_directory), (None, None, []))[2]
+        song = AudioSegment.from_wav(f"{self._config.get_config().recordings_directory}/{files[-1]}")
         Thread(target=play, args=(song + 30,)).start()
 
     def insert_colored_text(self, html_text):
@@ -232,11 +228,12 @@ class ReadingApp:
         self._accuracy_score_label["text"] += f" + {accuracy}"
         self._time_score_label["text"] += f" + {speed}"
 
-        if self._scoring.update_total_scores(accuracy, speed):
+        correct, incorrect = self._scoring.update_total_scores(accuracy, speed)
+        if correct:
             self._correct_label["text"] += " + 1"
             song = AudioSegment.from_mp3(get_resource_path("correct.mp3"))
             Thread(target=play, args=(song,)).start()
-        else:
+        elif incorrect:
             self._incorrect_label["text"] += " + 1"
             song = AudioSegment.from_mp3(get_resource_path("incorrect.mp3"))
             Thread(target=play, args=(song,)).start()
@@ -250,7 +247,7 @@ class ReadingApp:
         self.insert_colored_text(redacted_answer_in_html)
 
     def next_question(self, event=None):
-        if self.rerolled < self.max_rerolls:
+        if self.rerolled < self._config.get_config().max_new_question_rolls:
             self.current_sentence = self._scoring.get_next_sentence()
             self._question_text["height"] = np.ceil(len(self.current_sentence) / 80)
             self.insert_colored_text(self.current_sentence)
@@ -346,7 +343,10 @@ class ReadingApp:
 
     def run_locally(self, popup, process_last_recording):
         loading = self.loading_popup("Loading", "Loading... ")
-        self._speech2text.__init__(run_locally=True)
+        self._config.get_config().run_whisper_locally = True
+        self._config.save_config()
+        self._speech2text.__init__(server_url=self._config.get_config().whisper_host,
+                                   run_locally=self._config.get_config().run_whisper_locally)
         self.time_start = time.time()
         loading.destroy()
         self.close_connection_error_popup(popup)
@@ -373,23 +373,7 @@ class ReadingApp:
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Reading App")
-    parser.add_argument(
-        "--sentences",
-        type=str,
-        default="data/sentences.txt",
-        help="Path to sentences.txt",
-    )
-    parser.add_argument("--whisper-server", type=str, default="192.168.42.5:8000")
-    args = parser.parse_args()
-
-    # Now you can access the sentences file path with args.sentences
-    sentences_file_path = Path(args.sentences)
-    if not sentences_file_path.exists():
-        print(f"File {sentences_file_path} does not exist. ")
-
-    # Continue with your application logic
-    app = ReadingApp(sentences_file_path, args.whisper_server)
+    app = ReadingApp()
     app.window.mainloop()
 
 

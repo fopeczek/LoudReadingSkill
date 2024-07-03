@@ -5,10 +5,10 @@ import os
 from dataclasses import dataclass
 from pathlib import Path
 import datetime
+from typing import Tuple
 
 import numpy as np
-from .voice_sample import VoiceSample
-from .util import create_and_load_file, just_letters
+from core import create_and_load_file, just_letters, VoiceSample, Config
 
 
 @dataclass
@@ -82,45 +82,37 @@ def get_resource_path(audio_file: Path | str) -> Path:
 
 class Scoring:
     _answers: dict[str, Score]
-    _answers_file: Path
     _scores_sort: list[(Score, str)]
     _total_score: TotalScore
-    _total_scores_file: Path
-    _story_mode: bool
+    _config: Config
 
     def __init__(
-        self,
-        questions_file: Path = os.path.join(os.getcwd(), "data/sentences.txt"),
-        answers_file: Path = os.path.join(os.getcwd(), "data/answers.json"),
-        total_scores_file: Path = os.path.join(os.getcwd(), "data/scores.json"),
-        story_mode: bool = True,
+            self,
+            config: Config,
     ):
-        self._answers_file = answers_file
-        self._total_scores_file = total_scores_file
+        self._config = config
         self._answers = {}
         self._scores_sort = []
-        self._recordings = {}
         self._total_score = TotalScore()
-        self._story_mode = story_mode
 
         check_directories()
 
         self.load_answers()
-        self.load_questions(questions_file)
+        self.load_questions()
         self.load_total_scores()
         heapq.heapify(self._scores_sort)
 
     def load_answers(self):
         self._answers = {
             sentence: Score.FromDict(score)
-            for sentence, score in create_and_load_file(self._answers_file, {}).items()
+            for sentence, score in create_and_load_file(self._config.get_config().answers_file, {}).items()
         }
         self._scores_sort = [
             (score, sentence) for sentence, score in self._answers.items()
         ]
 
-    def load_questions(self, questions_file: Path):
-        for line in open(questions_file):
+    def load_questions(self):
+        for line in open(self._config.get_config().questions_file, "r"):
             sentence = line.strip()
             if sentence not in self._answers:
                 self._answers[sentence] = Score()
@@ -128,23 +120,23 @@ class Scoring:
 
     def load_total_scores(self):
         self._total_score = TotalScore.FromDict(
-            create_and_load_file(self._total_scores_file, self._total_score.dict())
+            create_and_load_file(self._config.get_config().scores_file, self._total_score.dict())
         )
 
     def get_next_sentence(self) -> str:
-        if self._story_mode:
+        if self._config.get_config().story_mode:
             out = list(self._answers)[self._total_score.story_index]
             return out
         else:
             return heapq.heappop(self._scores_sort)[1]
 
     def set_sentence_answer(
-        self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
+            self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
     ):
         score = Score(accuracy_score, time_score, user_answer, datetime.datetime.now())
         self._answers[sentence] = score
         heapq.heappush(self._scores_sort, (score, sentence))
-        with open(self._answers_file, "w") as fw:
+        with open(self._config.get_config().answers_file, "w") as fw:
             jsonobj = json.dumps(
                 {sentence: score.dict() for sentence, score in self._answers.items()},
                 indent=4,
@@ -153,7 +145,8 @@ class Scoring:
 
     def save_user_audio(self, audio: VoiceSample):
         file = Path(
-            f"data/audio/user/{datetime.datetime.now().isoformat(sep='-', timespec='seconds')}.wav"
+            f"{self._config.get_config().recordings_directory}/"
+            f"{datetime.datetime.now().isoformat(sep='-', timespec='seconds')}.wav"
         )
         open(os.path.join(os.getcwd(), str(file)), "w").close()
         audio.save(file)
@@ -161,26 +154,31 @@ class Scoring:
     def total_scores(self) -> TotalScore:
         return self._total_score
 
-    def update_total_scores(self, accuracy: float, speed: float) -> bool:
+    def update_total_scores(self, accuracy: float, speed: float) -> tuple[bool, bool]:
         self._total_score.accuracy += accuracy
         self._total_score.accuracy = np.round(self._total_score.accuracy, 2)
         self._total_score.speed += speed
         self._total_score.speed = np.round(self._total_score.speed, 2)
-        if accuracy == 1.0 and speed == 1.0:  # TODO get correct condition from settings
+        correct = False
+        incorrect = False
+        if (accuracy >= self._config.get_config().correct_min_accuracy and
+                speed >= self._config.get_config().correct_min_speed):
             self._total_score.correct += 1
             self._total_score.story_index += 1
             correct = True
-        else:
+        elif (accuracy < self._config.get_config().incorrect_max_accuracy or
+              speed < self._config.get_config().incorrect_max_speed):
             self._total_score.incorrect += 1
-            correct = False
+            incorrect = True
         self._total_score.total_questions += 1
-        with open(self._total_scores_file, "w") as fw:
+        with open(self._config.get_config().scores_file, "w") as fw:
             jsonobj = json.dumps(self._total_score.dict(), indent=4)
             fw.write(jsonobj)
-        return correct
+        return correct, incorrect
+
 
 def calculate_timeout_from_sentence(sentence: str) -> float:
-    return len(just_letters(sentence)) / 5 + 4
+    return len(just_letters(sentence)) / 6 + 4
 
 
 def calc_time_penalty(time_taken, sentence: str) -> float:
