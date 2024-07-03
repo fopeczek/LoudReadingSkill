@@ -17,6 +17,7 @@ class TotalScore:
     correct: float = 0.0
     incorrect: float = 0.0
     total_questions: float = 0.0
+    story_index: int = 0
 
     @staticmethod
     def FromDict(d: dict):
@@ -26,6 +27,7 @@ class TotalScore:
             d["correct"],
             d["incorrect"],
             d["total_questions"],
+            d["story_index"],
         )
 
     def dict(self):
@@ -35,6 +37,7 @@ class TotalScore:
             "correct": self.correct,
             "incorrect": self.incorrect,
             "total_questions": self.total_questions,
+            "story_index": self.story_index,
         }
 
 
@@ -76,13 +79,15 @@ class Scoring:
     _total_score: TotalScore
     _total_scores_file: str
     _scoring_settings: dict[str, float]
+    _story_mode: bool
 
     def __init__(
-        self,
-        questions_file: str = "data/sentences.txt",
-        answers_file: str = "data/answers.json",
-        total_scores_file: str = "data/scores.json",
-        settings_file: str = "data/settings.json",
+            self,
+            questions_file: str = "data/sentences.txt",
+            answers_file: str = "data/answers.json",
+            total_scores_file: str = "data/scores.json",
+            settings_file: str = "data/settings.json",
+            story_mode: bool = True,
     ):
         self._answers_file = answers_file
         self._total_scores_file = total_scores_file
@@ -90,6 +95,7 @@ class Scoring:
         self._scores_sort = []
         self._recordings = {}
         self._total_score = TotalScore()
+        self._story_mode = story_mode
 
         check_directories()
 
@@ -124,10 +130,14 @@ class Scoring:
         pass
 
     def get_next_sentence(self) -> str:
-        return heapq.heappop(self._scores_sort)[1]
+        if self._story_mode:
+            out = list(self._answers)[self._total_score.story_index]
+            return out
+        else:
+            return heapq.heappop(self._scores_sort)[1]
 
     def set_sentence_answer(
-        self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
+            self, sentence: str, user_answer: str, accuracy_score: float, time_score: float
     ):
         score = Score(accuracy_score, time_score, user_answer, datetime.datetime.now())
         self._answers[sentence] = score
@@ -156,6 +166,7 @@ class Scoring:
         self._total_score.speed = np.round(self._total_score.speed, 2)
         if accuracy == 1.0 and speed == 1.0:  # TODO get correct condition from settings
             self._total_score.correct += 1
+            self._total_score.story_index += 1
             correct = True
         else:
             self._total_score.incorrect += 1
@@ -221,7 +232,7 @@ def score_sentence(correct_sentence: str, user_sentence: str) -> tuple[float, st
     left_word_pos_idx = 0
     sequence_pos = 0
     words = [True] * (
-        len(correct_spaces) - 1
+            len(correct_spaces) - 1
     )  # Each word will get a True if was correctly read, or False if not
 
     correct_pos_left = mb[sequence_pos].a

@@ -1,7 +1,7 @@
 import numpy as np
 import pyaudio
 from pathlib import Path
-from ..core.voice_sample import VoiceSample
+from core.voice_sample import VoiceSample
 
 
 class Recorder:
