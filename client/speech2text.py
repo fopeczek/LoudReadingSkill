@@ -4,11 +4,11 @@ from urllib.parse import urlparse
 
 
 class Speech2Text:
-    _run_locally: bool = False
+    _run_locally: bool
     _local_model = None
     _remote_address: AnyUrl
 
-    def __init__(self, server_url: AnyUrl, run_locally=False):
+    def __init__(self, server_url: AnyUrl, run_locally):
         self._run_locally = run_locally
         if not self._run_locally:
             try:
@@ -50,7 +50,6 @@ class Speech2Text:
             return True
         try:
             out = requests.get(f"{self._remote_address}/request/", data={}).text
-            print(out)
-            return True
+            return out != ""
         except requests.exceptions.ConnectionError:
             return False

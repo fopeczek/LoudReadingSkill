@@ -39,13 +39,6 @@ class Recorder:
     def save_last_recording(self, filename: str):
         return self.get_last_recording().save(Path(filename))
 
-    def play_last_recording(self):
-        stream = self.p.open(
-            format=pyaudio.paInt16, channels=2, rate=44100, output=True
-        )
-        stream.write(b"".join(self.frames))
-        stream.stop_stream()
-
     def callback(self, in_data, frame_count, time_info, status):
         self.frames.append(in_data)
         return (in_data, pyaudio.paContinue)
