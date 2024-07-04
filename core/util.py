@@ -18,5 +18,15 @@ def create_and_load_file(file_name: Path, default_content):
     return default_content
 
 
+def create_and_load_file_str(file_name: Path, default_content: str):
+    if file_name.exists():
+        with open(file_name, "r") as fr:
+            return json.load(fr)
+    else:
+        with open(file_name, "w") as fw:
+            fw.write(default_content)
+    return default_content
+
+
 def just_letters(s: str) -> str:
     return " ".join(s.lower().translate(str.maketrans("", "", "!?.,;:-")).split())
