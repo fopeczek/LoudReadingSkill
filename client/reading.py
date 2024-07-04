@@ -53,7 +53,9 @@ class ReadingApp:
     _correct_label: tk.Label
 
     def __init__(self, config_path: Path):
-        if config_path is None or not config_path.exists():
+        if config_path is None:
+            config_path = Path("config.json")
+        if not config_path.exists():
             self._config = ConfigDataDO()
         else:
             self._config = load_config(config_path)
@@ -158,7 +160,10 @@ class ReadingApp:
             event.keysym == "space" or event.widget == self._record_button
         ) and not self.connection_error_popup:
             if not self.started_recording:
-                if self.answered_times < self._config.max_answers_per_question:
+                if (
+                    self.answered_times < self._config.max_answers_per_question
+                    or self._config.story_mode
+                ):
                     self.start_recording()
             else:
                 self.stop_recording()
@@ -212,17 +217,28 @@ class ReadingApp:
             self._info_label.grid(row=1, column=2, padx=20)
             return
 
+        score, correct, incorrect = self.check_answer(transcript)
+
         self.answered_times += 1
         self.rerolled = 0
         self._record_button["background"] = "black"
         self._record_button["activebackground"] = "black"
+
         self._record_button["state"] = (
             "disabled"
             if self.answered_times >= self._config.max_answers_per_question
+            and not self._config.story_mode
             else "normal"
         )
         self._record_button["text"] = "Start recording"
-        self._next_question_button["state"] = "normal"
+
+        if self._config.story_mode:
+            if correct:
+                self._next_question_button["state"] = "normal"
+            else:
+                self._next_question_button["state"] = "disabled"
+        else:
+            self._next_question_button["state"] = "normal"
 
         self._user_answer = tk.Text(self._window, height=np.ceil(len(transcript) / 80))
         self._user_answer.configure(background="black", foreground="white")
@@ -238,8 +254,6 @@ class ReadingApp:
         self._replay_last_button.bind("<ButtonPress>", self.replay_last_recording)
         self._replay_last_button.grid(row=9, column=0, columnspan=3)
         self.update_window_size()
-
-        self.check_answer(transcript)
 
     def replay_last_recording(self, event=None):
         files = next(os.walk(self._config.recordings_directory), (None, None, []))[2]
@@ -260,7 +274,8 @@ class ReadingApp:
         self._question_text.insert(tk.END, html_text[last_end:], "center")
         self._question_text.config(state="disabled")
 
-    def check_answer(self, transcript: str):
+    def check_answer(self, transcript: str) -> tuple[ScoreDO, bool, bool]:
+        self._config.recordings_directory.mkdir(parents=True, exist_ok=True)
         saved_audio_file = (
             self._config.recordings_directory
             / f"{datetime.datetime.now().isoformat(sep='-', timespec='seconds')}.wav"
@@ -307,8 +322,11 @@ class ReadingApp:
 
         self._question_text.delete("1.0", tk.END)
         self.insert_colored_text(redacted_answer_in_html)
+        return score, correct, incorrect
 
     def next_question(self, event=None):
+        if self._next_question_button["state"] == "disabled":
+            return
         self.current_sentence = self._scoring.create_the_next_sentence()
         self._question_text["height"] = np.ceil(len(self.current_sentence) / 80)
         self.insert_colored_text(self.current_sentence)

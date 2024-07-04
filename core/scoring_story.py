@@ -43,7 +43,7 @@ class Scoring_Story(IScoring):
     def create_the_next_sentence(self) -> str:
         """Returns the sentence that the user should be asked next."""
         self._last_index += 1
-        return self._story[self._last_index]
+        return self._story[self._last_index - 1]
 
     @overrides
     def set_sentence_answer(
