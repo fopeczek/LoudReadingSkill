@@ -7,7 +7,9 @@ from pathlib import Path
 import datetime
 
 import numpy as np
-from core import create_and_load_file, just_letters, VoiceSample, Config
+from .util import create_and_load_file, just_letters
+from .voice_sample import VoiceSample
+from .config import Config
 
 
 @dataclass
@@ -27,7 +29,7 @@ class TotalScore:
             d["correct"],
             d["incorrect"],
             d["total_questions"],
-            d["story_index"],
+            d.get("story_index", 0),
         )
 
     def dict(self):

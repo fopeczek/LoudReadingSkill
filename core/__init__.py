@@ -1,4 +1,7 @@
-from .util import create_and_load_file as create_and_load_file, just_letters as just_letters
+from .util import (
+    create_and_load_file as create_and_load_file,
+    just_letters as just_letters,
+)
 
 from .config import Config as Config
 
@@ -11,4 +14,7 @@ from .scoring import (
     get_resource_path as get_resource_path,
 )
 
-from .config import Config as Config
+from .local_whisper import (
+    get_max_gpu_memory as get_max_gpu_memory,
+    guess_whisper_model as guess_whisper_model,
+)

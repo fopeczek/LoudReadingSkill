@@ -1,6 +1,7 @@
 import requests
 from pydantic import AnyUrl
 from urllib.parse import urlparse
+from core import guess_whisper_model, get_max_gpu_memory
 
 
 class Speech2Text:
@@ -8,7 +9,7 @@ class Speech2Text:
     _local_model = None
     _remote_address: AnyUrl
 
-    def __init__(self, server_url: AnyUrl, run_locally):
+    def __init__(self, server_url: AnyUrl, run_locally, whisper_model: str = "auto"):
         self._run_locally = run_locally
         if not self._run_locally:
             try:
@@ -16,7 +17,14 @@ class Speech2Text:
             except ImportError:
                 run_locally = True
             if self._run_locally:
-                self._local_model = whisper.load_model("medium")
+                if whisper_model == "auto":
+                    whisper_model = guess_whisper_model(
+                        get_max_gpu_memory() / 1024 / 1024
+                    )
+                    print(
+                        f"Auto-detected best whisper model based on amount of free memory on GPU: {whisper_model}"
+                    )
+                self._local_model = whisper.load_model(whisper_model)
 
         if isinstance(server_url, str):
             url = urlparse(server_url)

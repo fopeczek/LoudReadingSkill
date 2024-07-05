@@ -1,12 +1,10 @@
-import os
-from pathlib import Path
 import json
-
 from dataclasses import dataclass
+from pathlib import Path
 
 from pydantic import AnyUrl
 
-from core import create_and_load_file
+from .util import create_and_load_file
 
 
 @dataclass
@@ -24,6 +22,7 @@ class ConfigData:
     answers_file: Path = Path("data/answers.json")
     scores_file: Path = Path("data/scores.json")
     recordings_directory: Path = Path("data/audio/user")
+    whisper_model: str = "auto"
 
     @staticmethod
     def FromDict(d: dict):
@@ -41,6 +40,7 @@ class ConfigData:
             Path(d["answers file"]),
             Path(d["scores file"]),
             Path(d["user recordings directory"]),
+            d["whisper model"],
         )
 
     def dict(self):
@@ -58,6 +58,7 @@ class ConfigData:
             "answers file": str(self.answers_file),
             "scores file": str(self.scores_file),
             "user recordings directory": str(self.recordings_directory),
+            "whisper model": self.whisper_model,
         }
 
 
@@ -71,7 +72,9 @@ class Config:
         self.load_config()
 
     def load_config(self):
-        self._config_data = ConfigData.FromDict(create_and_load_file(self._config_path, self._config_data.dict()))
+        self._config_data = ConfigData.FromDict(
+            create_and_load_file(self._config_path, self._config_data.dict())
+        )
 
     def save_config(self):
         with open(self._config_path, "w") as f:
