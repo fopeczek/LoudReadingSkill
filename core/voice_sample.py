@@ -8,12 +8,14 @@ import numpy as np
 import pyaudio
 from pydantic import BaseModel, field_serializer, field_validator
 from pydub import AudioSegment
+from pydub.playback import play
 
 
 class VoiceSample(BaseModel):
     data: bytes
     frame_rate: int
     sample_width: int = 2
+    channels: int = 1
 
     @field_validator("data", mode="before")
     @classmethod
@@ -33,7 +35,7 @@ class VoiceSample(BaseModel):
             self.data,
             frame_rate=self.frame_rate,
             sample_width=self.sample_width,
-            channels=1,
+            channels=self.channels,
         )
 
         if self.frame_rate != 16000:  # 16 kHz
@@ -47,7 +49,7 @@ class VoiceSample(BaseModel):
             self.data,
             frame_rate=self.frame_rate,
             sample_width=self.sample_width,
-            channels=1,
+            channels=self.channels,
         )
 
         audio_segment = audio_segment.set_frame_rate(frame_rate)
@@ -74,15 +76,13 @@ class VoiceSample(BaseModel):
         return self.data
 
     def play(self):
-        # Play the last recording
-        p = pyaudio.PyAudio()
-        if self.sample_width == 2:
-            p_format = pyaudio.paInt16
-        else:
-            raise ValueError("Unsupported sample width")
-        stream = p.open(format=p_format, channels=1, rate=self.frame_rate, output=True)
-        stream.write(self.data)
-        stream.stop_stream()
+        audio = AudioSegment(
+            self.data,
+            frame_rate=self.frame_rate,
+            sample_width=self.sample_width,
+            channels=self.channels,
+        )
+        play(audio)
 
     def length(self):
         return len(self.data) / self.frame_rate / self.sample_width
