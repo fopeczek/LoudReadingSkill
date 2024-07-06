@@ -8,8 +8,8 @@ from pydub.playback import play
 from threading import Thread
 
 from core import Scoring, score_sentence, calc_time_penalty, get_resource_path, Config, VoiceSample
-from recorder import Recorder
-from speech2text import Speech2Text
+from .recorder import Recorder
+from .speech2text import Speech2Text
 
 
 @dataclass
@@ -472,7 +472,3 @@ class ReadingApp:
 def main():
     app = ReadingApp()
     app.window.mainloop()
-
-
-if __name__ == "__main__":
-    main()
