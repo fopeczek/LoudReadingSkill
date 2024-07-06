@@ -9,6 +9,7 @@ import humanize
 import numpy as np
 from pydub import AudioSegment
 from pydub.playback import play
+import argparse
 
 from core import (
     get_resource_path,
@@ -53,13 +54,6 @@ class ReadingApp:
     _correct_label: tk.Label
 
     def __init__(self, config_path: Path):
-        if config_path is None:
-            config_path = Path("config.json")
-        if not config_path.exists():
-            self._config = ConfigDataDO()
-        else:
-            self._config = load_config(config_path)
-
         if self._config.story_mode:
             self._scoring = Scoring_Story(self._config)
         else:
@@ -450,12 +444,37 @@ class ReadingApp:
 
 
 def main(config_path: Path = None):
-    app = ReadingApp(config_path)
+    parser = argparse.ArgumentParser(description="Reading App")
+    parser.add_argument(
+        "--sentences",
+        type=str,
+        default=None,
+        help="Path to sentences.txt",
+    )
+    parser.add_argument("--whisper-server", type=str, default="192.168.42.5:8000")
+    parser.add_argument("--config-path", type=str, default=None)
+    args = parser.parse_args()
+
+    if args.config_path is None:
+        args.config_path = Path("config.json")
+    if not args.config_path.exists():
+        config = ConfigDataDO()
+    else:
+        config = load_config(config_path)
+
+    # Now you can access the sentences file path with args.sentences
+    if args.sentences is not None:
+        sentences_file_path = Path(args.sentences)
+        if not sentences_file_path.exists():
+            print(f"File {sentences_file_path} does not exist. ")
+        config.questions_file = sentences_file_path
+
+    if args.whisper_server is not None:
+        config.whisper_host = args.whisper_server
+        config.run_whisper_locally = False
+
+    app = ReadingApp(config)
     try:
         app.window.mainloop()
     finally:
         app._config.save(config_path)
-
-
-if __name__ == "__main__":
-    main()

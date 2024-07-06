@@ -37,6 +37,8 @@ class ConfigDataDO(BaseModel):
         return ScoreHistoryDO(**json.loads(json_text))
 
     def load_questions(self) -> list[str]:
+        if not self.questions_file.exists():
+            return []
         return self.questions_file.read_text().split("\n")
 
     def load_total_scores(self) -> TotalScoreDO:
