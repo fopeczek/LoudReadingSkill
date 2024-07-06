@@ -53,13 +53,15 @@ class ReadingApp:
     _incorrect_label: tk.Label
     _correct_label: tk.Label
 
-    def __init__(self, config_path: Path):
-        if self._config.story_mode:
-            self._scoring = Scoring_Story(self._config)
-        else:
-            self._scoring = Scoring_Arcade(self._config)
+    def __init__(self, config: ConfigDataDO):
+        self._config = config
 
-        self._total_score = self._config.load_total_scores()
+        if config.story_mode:
+            self._scoring = Scoring_Story(config)
+        else:
+            self._scoring = Scoring_Arcade(config)
+
+        self._total_score = config.load_total_scores()
 
         self._recorder = Recorder()
 
@@ -74,8 +76,8 @@ class ReadingApp:
         self.connection_error_popup = False
 
         self._speech2text = Speech2Text(
-            server_url=self._config.whisper_host,
-            run_locally=self._config.run_whisper_locally,
+            server_url=config.whisper_host,
+            run_locally=config.run_whisper_locally,
         )
 
         self._user_answer = None
