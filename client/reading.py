@@ -1,33 +1,56 @@
 from dataclasses import dataclass
-
-import numpy as np
+import datetime
+import os
 import time
 import tkinter as tk
+from pathlib import Path
+from threading import Thread
+from pydantic import BaseModel
+
+import numpy as np
 from pydub import AudioSegment
 from pydub.playback import play
-from threading import Thread
+import argparse
 
-from core import Scoring, score_sentence, calc_time_penalty, get_resource_path, Config, VoiceSample
+from core import (
+    get_resource_path,
+    ConfigDataDO,
+    IScoring,
+    load_config,
+    Scoring_Arcade,
+    Scoring_Story,
+    TotalScoreDO,
+    ScoreDO,
+    VoiceSample,
+)
 from .recorder import Recorder
 from .speech2text import Speech2Text
 
 
-@dataclass
-class Answer:
+def highlight_sentence(correct_sentence: str, words: list[bool]) -> str:
+    reference_tokens = correct_sentence.split()
+    formatted_text = ""
+    for i, token in enumerate(reference_tokens):
+        if words[i]:
+            formatted_text += token + " "
+        else:
+            formatted_text += f"*{token}* "
+    return formatted_text
+
+
+class Answer(BaseModel):
     question: str
     answer: str
     accuracy: float
-    speed: float
-    correct: bool
-    incorrect: bool
     recording: VoiceSample
 
 
 class ReadingApp:
-    _scoring: Scoring
+    _scoring: IScoring
+    _total_score: TotalScoreDO
     _recorder: Recorder
     _speech2text: Speech2Text
-    _config: Config
+    _config: ConfigDataDO
 
     started_recording: bool
     rerolled: int
@@ -47,13 +70,17 @@ class ReadingApp:
     _next_question_button: tk.Button
     _accuracy_score_label: tk.Label
     _total_questions_label: tk.Label
-    _time_score_label: tk.Label
-    _incorrect_label: tk.Label
-    _correct_label: tk.Label
 
-    def __init__(self):
-        self._config = Config()
-        self._scoring = Scoring(self._config)
+    def __init__(self, config: ConfigDataDO):
+        self._config = config
+
+        if config.story_mode:
+            self._scoring = Scoring_Story(config)
+        else:
+            self._scoring = Scoring_Arcade(config)
+
+        self._total_score = config.load_total_scores()
+
         self._recorder = Recorder()
 
         self.started_recording = False
@@ -69,8 +96,8 @@ class ReadingApp:
         self.connection_error_popup = False
 
         self._speech2text = Speech2Text(
-            server_url=self._config.get_config().whisper_host,
-            run_locally=self._config.get_config().run_whisper_locally,
+            server_url=config.whisper_host,
+            run_locally=config.run_whisper_locally,
         )
 
         self._user_answer = None
@@ -112,35 +139,17 @@ class ReadingApp:
         self._next_question_button.grid(row=2, column=0, columnspan=3, pady=5)
 
         self._accuracy_score_label = tk.Label(
-            self._window, text=f"Accuracy: {self._scoring.total_scores().accuracy}"
+            self._window, text=f"Accuracy: {self._total_score.accuracy}"
         )
         self._accuracy_score_label.configure(background="black", foreground="white")
         self._accuracy_score_label.grid(row=3, column=0, columnspan=3)
 
-        self._time_score_label = tk.Label(
-            self._window, text=f"Speed: {self._scoring.total_scores().speed}"
-        )
-        self._time_score_label.configure(background="black", foreground="white")
-        self._time_score_label.grid(row=4, column=0, columnspan=3)
-
-        self._correct_label = tk.Label(
-            self._window, text=f"Correct: {int(self._scoring.total_scores().correct)}"
-        )
-        self._correct_label.configure(background="black", foreground="white")
-        self._correct_label.grid(row=5, column=0, columnspan=3)
-
-        self._incorrect_label = tk.Label(
-            self._window, text=f"Incorrect: {int(self._scoring.total_scores().incorrect)}"
-        )
-        self._incorrect_label.configure(background="black", foreground="white")
-        self._incorrect_label.grid(row=6, column=0, columnspan=3)
-
         self._total_questions_label = tk.Label(
             self._window,
-            text=f"Total questions: {int(self._scoring.total_scores().total_questions)}",
+            text=f"Total questions: {self._total_score.total_questions}",
         )
         self._total_questions_label.configure(background="black", foreground="white")
-        self._total_questions_label.grid(row=7, column=0, columnspan=3)
+        self._total_questions_label.grid(row=6, column=0, columnspan=3)
 
         self.next_question()
 
@@ -149,7 +158,7 @@ class ReadingApp:
     def toggle_recording(self, event):
         if (event.keysym == "space" or event.widget == self._record_button) and not self.connection_error_popup:
             if not self.started_recording:
-                if len(self.answers) < self._config.get_config().max_answers_per_question:
+                if len(self.answers) < self._config.max_answers_per_question or self._config.story_mode:
                     self.start_recording()
             else:
                 self.stop_recording()
@@ -208,7 +217,7 @@ class ReadingApp:
                                    recording=self._recorder.get_last_recording(), correct=False, incorrect=False))
         self.current_answer = len(self.answers) - 1
 
-        if len(self.answers) < self._config.get_config().max_answers_per_question:
+        if len(self.answers) < self._config.max_answers_per_question:
             self._record_button["state"] = "normal"
         else:
             self._record_button["state"] = "disabled"
@@ -217,41 +226,68 @@ class ReadingApp:
 
         if len(self.answers) == 1:
             self.rerolled = 0
-            self._user_answer = tk.Text(self._window, height=np.ceil(len(transcript) / 80))
-            self._user_answer.configure(background="black", foreground="white")
-            self._user_answer.delete("1.0", tk.END)
-            self._user_answer.insert(tk.END, transcript, "center")
-            self._user_answer.tag_configure("center", justify="center")
-            self._user_answer.grid(row=8, column=0, columnspan=3, pady=10)
-            self._replay_last_button = tk.Button(self._window, text="Replay last recording")
-            self._replay_last_button.configure(background="black", foreground="white")
-            self._replay_last_button.configure(activebackground="black", activeforeground="white")
-            self._replay_last_button.bind("<ButtonPress>", self.replay_answer)
-            self._replay_last_button.grid(row=9, column=0, columnspan=3)
+            self.setup_user_answer(transcript)
+            self.setup_replay_button()
 
         if len(self.answers) == 2:
-            self._previous_answer = tk.Button(self._window, text="<")
-            self._previous_answer.configure(background="black", foreground="white")
-            self._previous_answer.configure(activebackground="black", activeforeground="white")
-            self._previous_answer.bind("<ButtonPress>", self.previous_answer)
-            self._previous_answer.grid(row=9, column=0, columnspan=1)
-
-            self._next_answer = tk.Button(self._window, text=">")
-            self._next_answer.configure(background="black", foreground="white")
-            self._next_answer.configure(activebackground="black", activeforeground="white")
-            self._next_answer.bind("<ButtonPress>", self.next_answer)
-            self._next_answer.grid(row=9, column=1, columnspan=3)
-            self._next_answer["state"] = "disabled"
-
-            self._replay_last_button.destroy()
-            self._replay_last_button = tk.Button(self._window, text="Replay last recording")
-            self._replay_last_button.configure(background="black", foreground="white")
-            self._replay_last_button.configure(activebackground="black", activeforeground="white")
-            self._replay_last_button.bind("<ButtonPress>", self.replay_answer)
-            self._replay_last_button.grid(row=9, column=0, columnspan=3)
+            self.setup_multiple_answers_ui()
 
         self.update_window_size()
         self.check_answer(transcript)
+
+    def check_answer(self, transcript: str):
+        self._config.recordings_directory.mkdir(parents=True, exist_ok=True)
+        saved_audio_file = (
+                self._config.recordings_directory
+                / f"{datetime.datetime.now().isoformat(sep='-', timespec='seconds')}.wav"
+        )
+        last_audio = self._recorder.get_last_recording()
+        last_audio.save(saved_audio_file)
+
+        score: ScoreDO = self._scoring.set_sentence_answer(
+            sentence=self.current_sentence,
+            user_answer=transcript,
+            thinking_time=self.time_taken,
+            speaking_time=last_audio.length(),
+            saved_audio_path=saved_audio_file,
+        )
+
+        self.update_scores(True, self.answers[-1])
+        redacted_answer_in_html = highlight_sentence(self.current_sentence, score.words)
+        self.answers[-1].accuracy = score.accuracy
+        self.answers[-1].question = redacted_answer_in_html
+        self._total_score.add_score(score, increase_story_index=True)
+
+        self.update_user_answer()
+
+    def setup_user_answer(self, transcript):
+        self._user_answer = tk.Text(self._window, height=np.ceil(len(transcript) / 80))
+        self._user_answer.configure(background="black", foreground="white")
+        self._user_answer.delete("1.0", tk.END)
+        self._user_answer.insert(tk.END, transcript, "center")
+        self._user_answer.tag_configure("center", justify="center")
+        self._user_answer.grid(row=7, column=0, columnspan=3, pady=10)
+
+    def setup_replay_button(self):
+        self._replay_last_button = tk.Button(self._window, text="Replay last recording")
+        self._replay_last_button.configure(background="black", foreground="white")
+        self._replay_last_button.configure(activebackground="black", activeforeground="white")
+        self._replay_last_button.bind("<ButtonPress>", self.replay_answer)
+        self._replay_last_button.grid(row=8, column=0, columnspan=3)
+
+    def setup_multiple_answers_ui(self):
+        self._previous_answer = tk.Button(self._window, text="<")
+        self._previous_answer.configure(background="black", foreground="white")
+        self._previous_answer.configure(activebackground="black", activeforeground="white")
+        self._previous_answer.bind("<ButtonPress>", self.previous_answer)
+        self._previous_answer.grid(row=8, column=0, columnspan=1)
+
+        self._next_answer = tk.Button(self._window, text=">")
+        self._next_answer.configure(background="black", foreground="white")
+        self._next_answer.configure(activebackground="black", activeforeground="white")
+        self._next_answer.bind("<ButtonPress>", self.next_answer)
+        self._next_answer.grid(row=8, column=1, columnspan=3)
+        self._next_answer["state"] = "disabled"
 
     def previous_answer(self, event):
         self.current_answer -= 1
@@ -274,16 +310,28 @@ class ReadingApp:
         self.insert_colored_text(self.answers[self.current_answer].question)
         self._user_answer.delete("1.0", tk.END)
         self._user_answer.insert(tk.END, self.answers[self.current_answer].answer, "center")
+        self._user_answer.height = np.ceil(len(self.answers[self.current_answer].answer) / 80)
         self.update_scores(True, self.answers[self.current_answer])
         self.update_window_size()
 
-    def replay_answer(self, event=None):
+    def update_scores(self, show_delta=False, answer=None):
+        self._accuracy_score_label["text"] = (
+            f"Accuracy: {np.round(self._total_score.accuracy, 2)}"
+        )
+        self._total_questions_label["text"] = (
+            f"Total questions: {self._total_score.total_questions}"
+        )
+        if show_delta:
+            self._accuracy_score_label["text"] += f" + {np.round(answer.accuracy, 2)}"
+            self._total_questions_label["text"] += " + 1"
+
+    def replay_answer(self, event):
         song = self.answers[self.current_answer].recording
         Thread(target=song.play).start()
 
     def insert_colored_text(self, html_text):
         import re
-        pattern = re.compile(r"<span style='background-color: #FF0000'>(.*?)</span>")
+        pattern = re.compile(r"\*(.*?)\*")
         last_end = 0
         self._question_text.config(state="normal")
         self._question_text.delete("1.0", tk.END)
@@ -294,36 +342,8 @@ class ReadingApp:
         self._question_text.insert(tk.END, html_text[last_end:], "center")
         self._question_text.config(state="disabled")
 
-    def check_answer(self, transcript):
-        accuracy, redacted_answer_in_html = score_sentence(
-            self.current_sentence, transcript
-        )
-        speed = calc_time_penalty(self.time_taken, self.current_sentence)
-        correct, incorrect = self._scoring.update_total_scores(accuracy, speed)
-
-        self.answers[-1].accuracy = accuracy
-        self.answers[-1].speed = speed
-        self.answers[-1].question = redacted_answer_in_html
-        self.answers[-1].correct = correct
-        self.answers[-1].incorrect = incorrect
-
-        self.update_scores(True, self.answers[-1])
-
-        if correct:
-            song = AudioSegment.from_mp3(get_resource_path("correct.mp3"))
-            Thread(target=play, args=(song,)).start()
-        elif incorrect:
-            song = AudioSegment.from_mp3(get_resource_path("incorrect.mp3"))
-            Thread(target=play, args=(song,)).start()
-
-        self._scoring.set_sentence_answer(
-            self.current_sentence, transcript, accuracy, speed
-        )
-        self._scoring.save_user_audio(self._recorder.get_last_recording())
-        self.update_user_answer()
-
     def next_question(self, event=None):
-        if self.rerolled < self._config.get_config().max_new_question_rolls:
+        if self.rerolled < self._config.max_new_question_rolls:
             self.current_sentence = self._scoring.get_next_sentence()
             self._question_text["height"] = np.ceil(len(self.current_sentence) / 80)
             self.insert_colored_text(self.current_sentence)
@@ -350,32 +370,7 @@ class ReadingApp:
             self._record_button["state"] = "normal"
             self._next_question_button["state"] = "disabled"
             self.update_window_size()
-
-    def update_scores(self, show_delta=False, answer=None):
-
-        self._accuracy_score_label["text"] = (
-            f"Accuracy: {self._scoring.total_scores().accuracy}"
-        )
-        self._time_score_label["text"] = (
-            f"Speed: {self._scoring.total_scores().speed}"
-        )
-        self._correct_label["text"] = (
-            f"Correct: {int(self._scoring.total_scores().correct)}"
-        )
-        self._incorrect_label["text"] = (
-            f"Incorrect: {int(self._scoring.total_scores().incorrect)}"
-        )
-        self._total_questions_label["text"] = (
-            f"Total questions: {int(self._scoring.total_scores().total_questions)}"
-        )
-        if show_delta:
-            self._accuracy_score_label["text"] += f" + {answer.accuracy}"
-            self._time_score_label["text"] += f" + {answer.speed}"
-            if answer.correct:
-                self._correct_label["text"] += " + 1"
-            elif answer.incorrect:
-                self._incorrect_label["text"] += " + 1"
-            self._total_questions_label["text"] += " + 1"
+            self.update_scores()
 
     def update_window_size(self):
         lines = np.ceil(len(self.current_sentence) / 80)
@@ -430,19 +425,19 @@ class ReadingApp:
 
     def close_connection_error_popup(self, popup):
         self.connection_error_popup = False
-        if len(self.answers) < self._config.get_config().max_answers_per_question:
+        if len(self.answers) < self._config.max_answers_per_question:
             self._record_button["state"] = "normal"
-        if self.rerolled < self._config.get_config().max_new_question_rolls:
+        if self.rerolled < self._config.max_new_question_rolls:
             self._next_question_button["state"] = "normal"
         popup.destroy()
 
     def run_locally(self, popup, process_last_recording):
         loading = self.loading_popup("Loading", "Loading... ")
-        self._config.get_config().run_whisper_locally = True
+        self._config.run_whisper_locally = True
         self._config.save_config()
         self._speech2text.__init__(
-            server_url=self._config.get_config().whisper_host,
-            run_locally=self._config.get_config().run_whisper_locally,
+            server_url=self._config.whisper_host,
+            run_locally=self._config.run_whisper_locally,
         )
         self.time_start = time.time()
         loading.destroy()
@@ -469,6 +464,38 @@ class ReadingApp:
         return self._window
 
 
-def main():
-    app = ReadingApp()
-    app.window.mainloop()
+def main(config_path: Path = None):
+    parser = argparse.ArgumentParser(description="Reading App")
+    parser.add_argument(
+        "--sentences",
+        type=str,
+        default=None,
+        help="Path to sentences.txt",
+    )
+    parser.add_argument("--whisper-server", type=str, default="192.168.42.5:8000")
+    parser.add_argument("--config-path", type=str, default=None)
+    args = parser.parse_args()
+
+    if args.config_path is None:
+        args.config_path = Path("config.json")
+    if not args.config_path.exists():
+        config = ConfigDataDO()
+    else:
+        config = load_config(config_path)
+
+    # Now you can access the sentences file path with args.sentences
+    if args.sentences is not None:
+        sentences_file_path = Path(args.sentences)
+        if not sentences_file_path.exists():
+            print(f"File {sentences_file_path} does not exist. ")
+        config.questions_file = sentences_file_path
+
+    if args.whisper_server is not None:
+        config.whisper_host = args.whisper_server
+        config.run_whisper_locally = False
+
+    app = ReadingApp(config)
+    try:
+        app.window.mainloop()
+    finally:
+        app._config.save(config_path)
