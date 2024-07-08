@@ -31,9 +31,7 @@ class TotalScoreDO(BaseModel):
     accuracy: float = 0.0
     thinking_time: float = 0.0
     speaking_time: float = 0.0
-    correct: float = 0.0
-    incorrect: float = 0.0
-    total_questions: float = 0.0
+    total_questions: int = 0
     story_index: int = 0
     _scores_file: Path
 
@@ -48,16 +46,12 @@ class TotalScoreDO(BaseModel):
         self._scores_file = scores_file
 
     def add_score(
-        self, score: ScoreDO, was_correct: bool, increase_story_index: bool = False
+        self, score: ScoreDO, increase_story_index: bool = False
     ):
         self.accuracy += score.accuracy
         self.thinking_time += score.thinking_time
         self.speaking_time += score.speaking_time
         self.total_questions += 1
-        if was_correct:
-            self.correct += 1
-        else:
-            self.incorrect += 1
         if increase_story_index:
             self.story_index += 1
         self.save()

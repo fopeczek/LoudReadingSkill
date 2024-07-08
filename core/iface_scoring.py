@@ -11,7 +11,7 @@ class IScoring(ABC):
     """
 
     @abstractmethod
-    def create_the_next_sentence(self) -> str:
+    def get_next_sentence(self) -> str:
         """Returns the next sentence to be preseneneted to the user."""
         pass
 

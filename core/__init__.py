@@ -15,6 +15,8 @@ from .scoring import get_resource_path as get_resource_path
 
 from .iface_scoring import IScoring as IScoring
 
+from .local_whisper import guess_whisper_model as guess_whisper_model, get_max_gpu_memory as get_max_gpu_memory
+
 from .scoring_serialization import (
     TotalScoreDO as TotalScoreDO,
     ScoreHistoryDO as ScoreHistoryDO,

@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from ..core.voice_sample import VoiceSample
+from core import VoiceSample, get_max_gpu_memory, guess_whisper_model
 
 app = FastAPI()
 
@@ -7,14 +7,19 @@ app = FastAPI()
 class Transcribe:
     _model: "whisper.model"  # noqa: F821
 
-    def __init__(self):
+    def __init__(self, whisper_model: str = "auto"):
         try:
             import whisper
         except ImportError:
             raise ImportError(
                 "In order to run the server, you need to have whisper installed locally."
             )
-        self._model = whisper.load_model("medium")
+        if whisper_model == "auto":
+            whisper_model = guess_whisper_model(get_max_gpu_memory() / 1024 / 1024)
+            print(
+                f"Auto-detected best whisper model based on amount of free memory on GPU: {whisper_model}"
+            )
+        self._model = whisper.load_model(whisper_model)
 
     def get_transcript(self, sound: VoiceSample) -> str:
         return self._model.transcribe(sound.get_sample_as_np_array(), language="pl")[
