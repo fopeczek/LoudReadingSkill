@@ -8,6 +8,7 @@ __pycache__/
 *.so
 
 data/*.json
+data/audio/*.wav
 
 config.json
 
