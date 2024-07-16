@@ -1,7 +1,7 @@
 import json
 from pathlib import Path
 
-from pydantic import AnyUrl, BaseModel
+from pydantic import AnyUrl, BaseModel, field_serializer
 
 from core import create_and_load_file_str
 from .scoring_serialization import ScoreHistoryDO, TotalScoreDO
@@ -21,6 +21,16 @@ class ConfigDataDO(BaseModel):
     scores_file: Path = Path("data/scores.json")
     recordings_directory: Path = Path("data/audio/user")
     history_file: Path = Path("data/history.json")
+
+    @field_serializer("whisper_host")
+    def serialize_whisper_host(self, value: AnyUrl):
+        if isinstance(value, AnyUrl):
+            return str(value)
+        assert isinstance(value, str)
+        # Serialize whisper_host with the `http` prefix
+        if not value.startswith("http"):
+            return f"http://{value}"
+        return value
 
     def save(self, config_path: Path = Path("config.json")):
         if config_path is None:
