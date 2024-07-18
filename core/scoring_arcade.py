@@ -12,7 +12,7 @@ from .util import just_letters
 
 
 def weighting_function(
-        x0: float, weight0: float, x1: float, weight1: float
+    x0: float, weight0: float, x1: float, weight1: float
 ) -> Callable[[float], float]:
     """Returns a function that gives a weight to a given value x, based on the two points (x0, weight0) and (x1, weight1)."""
     slope = -np.log(weight0 / weight1) / (x0 - x1)
@@ -26,7 +26,7 @@ def calculate_timeout_from_sentence(correct_sentence: str) -> float:
 
 
 def calc_time_penalty(
-        thinking_time: float, speaking_time: float, correct_sentence: str
+    thinking_time: float, speaking_time: float, correct_sentence: str
 ) -> float:
     timeout = calculate_timeout_from_sentence(correct_sentence)
     if thinking_time < timeout:
@@ -35,7 +35,7 @@ def calc_time_penalty(
         return 0
 
     return (thinking_time - timeout) / (
-            timeout * 9
+        timeout * 9
     )  # Linear interpolation between the two timeouts.
 
 
@@ -126,13 +126,19 @@ class Scoring_Arcade(IScoring):
         return self.sentence_scores()[0][1]
 
     @overrides
+    def set_next_sentence(self, new_index: int):
+        raise NotImplementedError(
+            "This function is not implemented in the arcade mode."
+        )
+
+    @overrides
     def set_sentence_answer(
-            self,
-            sentence: str,
-            user_answer: str,
-            thinking_time: float,
-            speaking_time: float,
-            saved_audio_path: Path,
+        self,
+        sentence: str,
+        user_answer: str,
+        thinking_time: float,
+        speaking_time: float,
+        saved_audio_path: Path,
     ) -> ScoreDO:
         """Sets the answer of a sentence."""
         assert sentence in self._questions, f"Unknown sentence: {sentence}"

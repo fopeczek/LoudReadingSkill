@@ -16,6 +16,11 @@ class IScoring(ABC):
         pass
 
     @abstractmethod
+    def set_next_sentence(self, new_index: int):
+        """Sets the next sentence to be presented to the user."""
+        pass
+
+    @abstractmethod
     def set_sentence_answer(
         self,
         sentence: str,

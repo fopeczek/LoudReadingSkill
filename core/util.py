@@ -28,5 +28,52 @@ def create_and_load_file_str(file_name: Path, default_content: str):
     return default_content
 
 
+ignored_letters = '!?".,;:-„”()[]{}'
+
+
 def just_letters(s: str) -> str:
-    return " ".join(s.lower().translate(str.maketrans("", "", "!?.,;:-")).split())
+    ans = " ".join(s.lower().translate(str.maketrans("", "", ignored_letters)).split())
+    return ans
+
+
+def just_letters_mapping(s: str) -> list[tuple[int, int]]:
+    """Returns a list of tuples (start, end) of words in the string"""
+
+    # Iterate a state machine with two states:
+    # - on a letter, inside a word
+    #   - each new letter extends the word
+    #   - each new non-letter ends the word, commits it to ans, and sets a state to "not in a word"
+    # - not in a word
+    #   - each new non-letter (ignored_letters and space) extends the state
+    #   - each new letter starts a new word.
+
+    ans = []
+    pos = 0
+    start_pos = pos
+
+    def in_a_word() -> int:
+        nonlocal pos
+        char = s[pos]
+        return 0 if (char in ignored_letters or char.isspace()) else 1
+
+    if len(s) == 0:
+        return []
+
+    in_word_state = 2
+
+    while pos < len(s):
+        if in_word_state == 2:
+            if (in_word_state := in_a_word()) == 1:
+                start_pos = pos
+            else:
+                in_word_state = 0
+        elif in_word_state == 1:
+            if (in_word_state := in_a_word()) == 0:
+                ans.append((start_pos, pos))
+        elif in_word_state == 0:
+            if (in_word_state := in_a_word()) == 1:
+                start_pos = pos
+
+        pos += 1
+
+    return ans

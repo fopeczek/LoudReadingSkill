@@ -46,6 +46,10 @@ class Scoring_Story(IScoring):
         return self._story[self._last_index - 1]
 
     @overrides
+    def set_next_sentence(self, new_index: int):
+        self._last_index = new_index
+
+    @overrides
     def set_sentence_answer(
         self,
         sentence: str,

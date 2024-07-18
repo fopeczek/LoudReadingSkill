@@ -20,19 +20,28 @@ from core import (
     TotalScoreDO,
     ScoreDO,
     VoiceSample,
+    just_letters_mapping,
 )
 from .recorder import Recorder
 from .speech2text import Speech2Text
 
 
 def highlight_sentence(correct_sentence: str, words: list[bool]) -> str:
-    reference_tokens = correct_sentence.split()
+    char_ranges = just_letters_mapping(correct_sentence)
     formatted_text = ""
-    for i, token in enumerate(reference_tokens):
+    last_end = 0
+    for i, (start, end) in enumerate(char_ranges):
+        formatted_text += correct_sentence[last_end:start]
+
+        token = correct_sentence[start:end]
         if words[i]:
-            formatted_text += token + " "
+            formatted_text += token
         else:
-            formatted_text += f"*{token}* "
+            formatted_text += f"*{token}*"
+
+        last_end = end
+        if i == len(char_ranges) - 1:
+            formatted_text += correct_sentence[end:]
     return formatted_text
 
 
@@ -73,12 +82,13 @@ class ReadingApp:
     def __init__(self, config: ConfigDataDO):
         self._config = config
 
+        self._total_score = config.load_total_scores()
+
         if config.story_mode:
             self._scoring = Scoring_Story(config)
+            self._scoring.set_next_sentence(self._total_score.story_index)
         else:
             self._scoring = Scoring_Arcade(config)
-
-        self._total_score = config.load_total_scores()
 
         self._recorder = Recorder()
 
@@ -115,7 +125,9 @@ class ReadingApp:
         self._window.grid_columnconfigure(0, weight=1)
         self._window.grid_columnconfigure(1, weight=1)
 
-        self._question_text = tk.Text(self._window, height=1, width=80, wrap="word")
+        self._question_text = tk.Text(
+            self._window, height=1, width=80, wrap="word", font=("Helvetica", 32)
+        )
         self._question_text.configure(background="black", foreground="white")
         self._question_text.tag_configure("center", justify="center")
         self._question_text.tag_config("highlight", justify="center", foreground="red")
@@ -169,7 +181,7 @@ class ReadingApp:
                 self.stop_recording()
 
     def start_recording(self):
-        self._last_score = 0.0
+        self._last_score = ScoreDO()
         self.time_taken = time.time() - self.time_start
         self.update_scores()
         song = AudioSegment.from_mp3(get_resource_path("start.mp3"))
@@ -266,7 +278,6 @@ class ReadingApp:
         redacted_answer_in_html = highlight_sentence(self.current_sentence, score.words)
         self.answers[-1].accuracy = score.accuracy
         self.answers[-1].question = redacted_answer_in_html
-        self._last_score = score
 
         if self._config.story_mode:
             if score.accuracy < self._config.incorrect_overall_score_threshold:
@@ -392,6 +403,8 @@ class ReadingApp:
         self._question_text.config(state="disabled")
 
     def next_question(self, event=None):
+        if self._next_question_button.config("state")[-1] == "disabled":
+            return
         self._total_score.add_score(self._last_score)
         self._last_score = ScoreDO()
         if self.rerolled < self._config.max_new_question_rolls:
