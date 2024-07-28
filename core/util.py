@@ -32,8 +32,14 @@ ignored_letters = '!?".,;:-„”()[]{}'
 
 
 def just_letters(s: str) -> str:
-    ans = " ".join(s.lower().translate(str.maketrans("", "", ignored_letters)).split())
-    return ans
+    tokens = s.lower().translate(str.maketrans("", "", ignored_letters)).split()
+    # Last letter "ę" in each token replace with "e".
+    for i in range(len(tokens)):
+        token = tokens[i]
+        if token[-1] == "ę":
+            tokens[i] = token[:-1] + "e"
+
+    return " ".join(tokens)
 
 
 def just_letters_mapping(s: str) -> list[tuple[int, int]]:

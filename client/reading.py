@@ -151,7 +151,9 @@ class ReadingApp:
         self._next_question_button.grid(row=2, column=0, columnspan=3, pady=5)
 
         self._accuracy_score_label = tk.Label(
-            self._window, text=f"Accuracy: {self._total_score.accuracy}"
+            self._window,
+            text=f"Accuracy: {self._total_score.accuracy}",
+            font=("Helvetica", 20),
         )
         self._accuracy_score_label.configure(background="black", foreground="white")
         self._accuracy_score_label.grid(row=3, column=0, columnspan=3)
@@ -159,6 +161,7 @@ class ReadingApp:
         self._total_questions_label = tk.Label(
             self._window,
             text=f"Total questions: {self._total_score.total_questions}",
+            font=("Helvetica", 20),
         )
         self._total_questions_label.configure(background="black", foreground="white")
         self._total_questions_label.grid(row=6, column=0, columnspan=3)
@@ -310,7 +313,9 @@ class ReadingApp:
         self.update_user_answer()
 
     def setup_user_answer(self, transcript):
-        self._user_answer = tk.Text(self._window, height=np.ceil(len(transcript) / 80))
+        self._user_answer = tk.Text(
+            self._window, height=np.ceil(len(transcript) / 80), font=("Helvetica", 32)
+        )
         self._user_answer.configure(background="black", foreground="white")
         self._user_answer.delete("1.0", tk.END)
         self._user_answer.insert(tk.END, transcript, "center")
