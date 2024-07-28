@@ -5,7 +5,6 @@ import wave
 from pathlib import Path
 
 import numpy as np
-import pyaudio
 from pydantic import BaseModel, field_serializer, field_validator
 from pydub import AudioSegment
 from pydub.playback import play
@@ -100,6 +99,14 @@ def test_voice_sample() -> VoiceSample:
     print(str(voice_sample))
     print(voice_sample.model_dump_json())
     return voice_sample
+
+
+def test_voice_sample_from_wav(wav_file: Path) -> VoiceSample:
+    with wave.open(str(wav_file), "rb") as wf:
+        data = wf.readframes(wf.getnframes())
+        frame_rate = wf.getframerate()
+        sample_width = wf.getsampwidth()
+        return VoiceSample(data=data, frame_rate=frame_rate, sample_width=sample_width)
 
 
 if __name__ == "__main__":

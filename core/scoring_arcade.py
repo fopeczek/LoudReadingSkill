@@ -135,16 +135,21 @@ class Scoring_Arcade(IScoring):
     def set_sentence_answer(
         self,
         sentence: str,
+        respeak_sentence: str,
         user_answer: str,
         thinking_time: float,
         speaking_time: float,
         saved_audio_path: Path,
     ) -> ScoreDO:
-        """Sets the answer of a sentence."""
+        """Sets the answer of a sentence.
+        :param respeak_sentence:
+        """
         assert sentence in self._questions, f"Unknown sentence: {sentence}"
 
         accuracy, words = score_sentence(
-            correct_sentence=sentence, user_sentence=user_answer
+            correct_sentence=sentence,
+            respeak_sentence=respeak_sentence,
+            user_sentence=user_answer,
         )
         time_penalty = calc_time_penalty(
             thinking_time=thinking_time,

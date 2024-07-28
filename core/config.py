@@ -38,7 +38,7 @@ class ConfigDataDO(BaseModel):
         config_path.write_text(self.model_dump_json(indent=4))
 
     def save_history(self, history_file: ScoreHistoryDO):
-        self.history_file.write_text(history_file.model_dump_json(indent=4))
+        self.history_file.write_text(history_file.model_dump_json(indent=4), "utf-8")
 
     def load_history(self) -> ScoreHistoryDO:
         if not self.history_file.exists():

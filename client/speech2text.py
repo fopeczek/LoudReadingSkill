@@ -2,9 +2,10 @@ import requests
 from pydantic import AnyUrl
 from urllib.parse import urlparse
 from core import guess_whisper_model, get_max_gpu_memory
+from .iface import ISpeech2Text
 
 
-class Speech2Text:
+class Speech2Text(ISpeech2Text):
     _run_locally: bool
     _local_model = None
     _remote_address: AnyUrl

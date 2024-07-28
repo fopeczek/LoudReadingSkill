@@ -1,19 +1,20 @@
+import argparse
 import datetime
 import time
 import tkinter as tk
 from pathlib import Path
 from threading import Thread
-from pydantic import BaseModel
 
 import numpy as np
+from pydantic import BaseModel
 from pydub import AudioSegment
 from pydub.playback import play
-import argparse
 
 from core import (
     get_resource_path,
     ConfigDataDO,
     IScoring,
+    IRespeak,
     load_config,
     Scoring_Arcade,
     Scoring_Story,
@@ -21,6 +22,7 @@ from core import (
     ScoreDO,
     VoiceSample,
     just_letters_mapping,
+    get_respeak_server,
 )
 from .recorder import Recorder
 from .speech2text import Speech2Text
@@ -79,6 +81,9 @@ class ReadingApp:
     _accuracy_score_label: tk.Label
     _total_questions_label: tk.Label
 
+    _respeak_executor: IRespeak
+    respoken_sentence: str
+
     def __init__(self, config: ConfigDataDO):
         self._config = config
 
@@ -96,6 +101,7 @@ class ReadingApp:
         self.rerolled = 0
 
         self.current_sentence = ""
+        self.respoken_sentence = ""
         self.answers = []
         self.current_answer = 0
 
@@ -109,6 +115,7 @@ class ReadingApp:
             server_url=config.whisper_host,
             run_locally=config.run_whisper_locally,
         )
+        self._respeak_executor = get_respeak_server(self._speech2text)
 
         self._user_answer = None
         self._replay_last_button = None
@@ -217,6 +224,9 @@ class ReadingApp:
             self._info_label.grid(row=1, column=2, padx=20)
             # TODO replace with place or pack, rare case if answered 2 times and on 3rd time recording is too short
             return
+
+        # TODO: Wait for the respeak sentence to be ready
+
         success, transcript = self._speech2text.get_transcript(sound)
         loading.destroy()
 
@@ -271,6 +281,7 @@ class ReadingApp:
 
         score: ScoreDO = self._scoring.set_sentence_answer(
             sentence=self.current_sentence,
+            respeak_sentence=self.respoken_sentence,
             user_answer=transcript,
             thinking_time=self.time_taken,
             speaking_time=last_audio.length(),
@@ -407,6 +418,11 @@ class ReadingApp:
         self._question_text.insert(tk.END, html_text[last_end:], "center")
         self._question_text.config(state="disabled")
 
+    def make_respoken_sentence(self):
+        self.respoken_sentence = self._respeak_executor.respeak(self.current_sentence)[
+            1
+        ]
+
     def next_question(self, event=None):
         if self._next_question_button.config("state")[-1] == "disabled":
             return
@@ -436,10 +452,14 @@ class ReadingApp:
             self.answers = []
             self.started_recording = False
             self.rerolled += 1
-            self._record_button["state"] = "normal"
+            self._record_button["state"] = "disabled"
             self._next_question_button["state"] = "disabled"
             self.update_window_size()
             self.update_scores()
+            # Force redraw the UI:
+            self._window.update()
+            self._respeak_task = self.make_respoken_sentence()
+            self._record_button["state"] = "normal"
 
     def update_window_size(self):
         lines = np.ceil(len(self.current_sentence) / 80)
