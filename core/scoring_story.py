@@ -8,6 +8,7 @@ from .iface_scoring import IScoring
 from .scoring_arcade import calc_time_penalty
 from .scoring_serialization import ScoreHistoryDO, ScoreDO
 from .sentence_accuracy import score_sentence
+from .util import just_letters
 
 
 class Scoring_Story(IScoring):
@@ -59,26 +60,46 @@ class Scoring_Story(IScoring):
         speaking_time: float,
         saved_audio_path: Path,
     ) -> ScoreDO:
-        accuracy, words = score_sentence(
+        (
+            accuracy_respeak,
+            accuracy_correct,
+            flag_correct,
+            correct_words,
+            respeak_map,
+            respeak_words,
+        ) = score_sentence(
             correct_sentence=sentence,
             respeak_sentence=respeak_sentence,
             user_sentence=user_answer,
         )
+        words = correct_words if flag_correct else respeak_words
         time_penalty = calc_time_penalty(
             thinking_time=thinking_time,
             speaking_time=speaking_time,
             correct_sentence=sentence,
         )
+        stripped_sentence = just_letters(sentence)
+        effort = len(stripped_sentence) - len(words) * 2
+        # Add quadratic component to the effort, normalized such that 90-letter effort will be double-scored
+        effort += effort * (effort / 140) ** 2
+
+        print(f"Effort: {effort}")
 
         score = ScoreDO(
-            accuracy=accuracy,
+            respeak_accuracy=accuracy_respeak,
+            correct_accuracy=accuracy_correct,
+            effort_done=effort,
             thinking_time=thinking_time,
             speaking_time=speaking_time,
             user_answer=user_answer,
             timestamp=datetime.datetime.now(),
             saved_audio=saved_audio_path,
             time_penalty=time_penalty,
-            words=words,
+            correct_words=correct_words,
+            respeak_sentence=respeak_sentence,
+            correct_sentence=sentence,
+            respeak_words=respeak_words,
+            flag_correct=flag_correct,
         )
 
         self._score_history.add_score(score, sentence)

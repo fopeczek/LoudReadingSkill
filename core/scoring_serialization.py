@@ -8,7 +8,9 @@ from pydantic import BaseModel, Field
 
 
 class ScoreDO(BaseModel):
-    accuracy: float = 0.0
+    respeak_accuracy: float = 0.0
+    correct_accuracy: float = 0.0
+    effort_done: float = 0.0
     thinking_time: float = 0.0
     speaking_time: float = 0.0
     user_answer: str = ""
@@ -17,7 +19,11 @@ class ScoreDO(BaseModel):
     )  # Because otherwise datetime.now() would be evaluated only once, at the import time
     saved_audio: Path = Path("")
     time_penalty: float = 0.0
-    words: list[bool] = []
+    correct_sentence: str = ""
+    respeak_sentence: str = ""
+    flag_correct: bool = True
+    respeak_words: list[bool] = []
+    correct_words: list[bool] = []
 
     def __le__(self, other: ScoreDO):  # To be able to use heapq
         return self.overall_score <= other.overall_score
@@ -26,9 +32,22 @@ class ScoreDO(BaseModel):
     def overall_score(self) -> float:
         return self.accuracy * self.time_penalty
 
+    @property
+    def words(self) -> list[bool]:
+        return self.correct_words if self.flag_correct else self.respeak_words
+
+    @property
+    def accuracy(self) -> float:
+        return self.correct_accuracy if self.flag_correct else self.respeak_accuracy
+
+    @property
+    def effort(self) -> float:
+        return self.effort_done * self.accuracy
+
 
 class TotalScoreDO(BaseModel):
     accuracy: float = 0.0
+    effort_done: float = 0.0
     thinking_time: float = 0.0
     speaking_time: float = 0.0
     total_questions: int = 0
@@ -45,10 +64,9 @@ class TotalScoreDO(BaseModel):
     def set_scores_file(self, scores_file: Path):
         self._scores_file = scores_file
 
-    def add_score(
-        self, score: ScoreDO, increase_story_index: bool = False
-    ):
+    def add_score(self, score: ScoreDO, increase_story_index: bool = False):
         self.accuracy += score.accuracy
+        self.effort_done += score.effort
         self.thinking_time += score.thinking_time
         self.speaking_time += score.speaking_time
         self.total_questions += 1
@@ -58,6 +76,15 @@ class TotalScoreDO(BaseModel):
 
     def save(self):
         self._scores_file.write_text(self.model_dump_json(indent=4))
+
+    def clear(self):
+        self.accuracy = 0.0
+        self.effort_done = 0.0
+        self.thinking_time = 0.0
+        self.speaking_time = 0.0
+        self.total_questions = 0
+        self.story_index = 0
+        self.save()
 
 
 class ScoreHistoryDO(BaseModel):

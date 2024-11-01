@@ -28,7 +28,7 @@ def create_and_load_file_str(file_name: Path, default_content: str):
     return default_content
 
 
-ignored_letters = '!?".,;:-„”()[]{}'
+ignored_letters = '!?".,;:-„”()[]{}—'
 
 
 def just_letters(s: str) -> str:
@@ -39,7 +39,12 @@ def just_letters(s: str) -> str:
         if token[-1] == "ę":
             tokens[i] = token[:-1] + "e"
 
-    return " ".join(tokens)
+    ans = " ".join(tokens)
+
+    # Replace each occurance of "  " (double space) with a single space
+    ans = ans.replace("  ", " ")
+    # Remove leading and trailing spaces
+    return ans.strip()
 
 
 def just_letters_mapping(s: str) -> list[tuple[int, int]]:

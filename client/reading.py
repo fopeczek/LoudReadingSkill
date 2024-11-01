@@ -80,6 +80,8 @@ class ReadingApp:
     _next_question_button: tk.Button
     _accuracy_score_label: tk.Label
     _total_questions_label: tk.Label
+    _effort_label: tk.Label
+    _clear_button: tk.Button
 
     _respeak_executor: IRespeak
     respoken_sentence: str
@@ -173,14 +175,34 @@ class ReadingApp:
         self._total_questions_label.configure(background="black", foreground="white")
         self._total_questions_label.grid(row=6, column=0, columnspan=3)
 
+        self._effort_label = tk.Label(
+            self._window,
+            text=f"Effort: {self._total_score.effort_done}",
+            font=("Helvetica", 20),
+        )
+        self._effort_label.configure(background="black", foreground="white")
+        self._effort_label.grid(row=4, column=0, columnspan=3)
+
+        self._clear_button = tk.Button(self._window, text="Clear")
+        self._clear_button.configure(background="black", foreground="white")
+        self._clear_button.configure(activebackground="black", activeforeground="white")
+        self._clear_button.bind("<ButtonPress>", self.clear_total_score)
+        self._clear_button.grid(row=9, column=0, columnspan=3, pady=5)
+
         self.next_question()
 
         self.check_speech2text()
 
+    def clear_total_score(self, event):
+        self._total_score.clear()
+        self.update_scores()
+
     def toggle_recording(self, event):
         if (
-            event.keysym == "space" or event.widget == self._record_button
-        ) and not self.connection_error_popup:
+            (event.keysym == "space" or event.widget == self._record_button)
+            and not self.connection_error_popup
+            and self._record_button["state"] != "disabled"
+        ):
             if not self.started_recording:
                 if (
                     len(self.answers) < self._config.max_answers_per_question
@@ -297,7 +319,6 @@ class ReadingApp:
             if score.accuracy < self._config.incorrect_overall_score_threshold:
                 song = AudioSegment.from_mp3(get_resource_path("incorrect.mp3"))
                 Thread(target=play, args=(song,)).start()
-
                 self._next_question_button["state"] = "disabled"
             else:
                 self._next_question_button["state"] = "normal"
@@ -389,16 +410,18 @@ class ReadingApp:
 
     def update_scores(self, show_delta=False):
         self._accuracy_score_label["text"] = (
-            f"Accuracy: {np.round(self._total_score.accuracy, 2)}"
+            f"Accuracy: {self._total_score.accuracy : .2f}"
         )
         self._total_questions_label["text"] = (
             f"Total questions: {self._total_score.total_questions}"
         )
+        self._effort_label["text"] = f"Effort: {self._total_score.effort_done : .0f}"
         if show_delta:
             self._accuracy_score_label["text"] += (
                 f" + {np.round(self._last_score.accuracy, 2)}"
             )
             self._total_questions_label["text"] += " + 1"
+            self._effort_label["text"] += f" + {self._last_score.effort : .0f}"
 
     def replay_answer(self, event):
         song = self.answers[self.current_answer].recording
@@ -424,9 +447,11 @@ class ReadingApp:
         ]
 
     def next_question(self, event=None):
-        if self._next_question_button.config("state")[-1] == "disabled":
+        if self._next_question_button["state"] == "disabled":
             return
-        self._total_score.add_score(self._last_score)
+        print(f"Added {self._last_score}")
+        self._total_score.add_score(self._last_score, False)
+
         self._last_score = ScoreDO()
         if self.rerolled < self._config.max_new_question_rolls:
             self.current_sentence = self._scoring.get_next_sentence()
@@ -447,19 +472,27 @@ class ReadingApp:
             if self._next_answer is not None:
                 self._next_answer.destroy()
                 self._next_answer = None
-            self.time_start = time.time()
 
             self.answers = []
             self.started_recording = False
             self.rerolled += 1
-            self._record_button["state"] = "disabled"
-            self._next_question_button["state"] = "disabled"
-            self.update_window_size()
-            self.update_scores()
-            # Force redraw the UI:
-            self._window.update()
-            self._respeak_task = self.make_respoken_sentence()
-            self._record_button["state"] = "normal"
+
+            if self.current_sentence.strip() == "":
+                self.rerolled = 0
+                self._record_button["state"] = "disabled"
+                self._next_question_button["state"] = "normal"
+                self.update_window_size()
+                self.update_scores()
+            else:
+                self._record_button["state"] = "disabled"
+                self._next_question_button["state"] = "disabled"
+                self.update_window_size()
+                self.update_scores()
+                # Force redraw the UI:
+                self._window.update()
+                self.time_start = time.time()
+                self._respeak_task = self.make_respoken_sentence()
+                self._record_button["state"] = "normal"
 
     def update_window_size(self):
         lines = np.ceil(len(self.current_sentence) / 80)

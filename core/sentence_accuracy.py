@@ -61,7 +61,7 @@ class TokenMatchedContent:
             [size for idx, size in self._matched_content if idx == dominant_match]
         )
         return (
-            dominant_size >= self.token_size * 0.8
+            dominant_size >= self.token_size * 0.99
         )  # 80% of the token must be the dominant match
 
 
@@ -269,7 +269,7 @@ def make_respeak_map(correct_sentence: str, respeak_sentence: str) -> list[int]:
 
     mapped_words, _ = word_mapper(correct_tokens_spaces, respeak_tokens_spaces)
     for i, idx in enumerate(mapped_words):
-        if idx == -1 and i % 2 == 1:
+        if idx == -1 and i % 2 == 1 and i >= 3:
             print(
                 f"Warning: correct word {correct_tokens[i%2 + 1]} not found in the respeak sentence."
             )
@@ -290,7 +290,8 @@ def score_sentence_respeak(
     )
 
     correct_errors = [
-        respeak_errors[correct2respeak_map[i]] for i in range(len(correct2respeak_map))
+        respeak_errors[correct2respeak_map[i]] if correct2respeak_map[i] > 0 else False
+        for i in range(len(correct2respeak_map))
     ]
 
     return calc_score_from_error_list(correct_token_sizes, correct_errors)
@@ -352,7 +353,7 @@ def make_token_mapping_from_sentences(
 
 def score_sentence(
     correct_sentence: str, respeak_sentence: str, user_sentence: str
-) -> tuple[float, list[bool]]:
+) -> tuple[float, float, bool, list[bool], list[int], list[bool]]:
     score_correct, words_correct, correct_token_sizes = score_sentence_correct(
         correct_sentence, user_sentence
     )
@@ -361,41 +362,19 @@ def score_sentence(
     score_respeak, words_respeak = score_sentence_respeak(
         correct_token_sizes, correct2respeak_map, respeak_sentence, user_sentence
     )
-    if score_correct < score_respeak:
-        return score_respeak, words_respeak
 
-    return score_correct, words_correct
+    print()
+    print(f"Correct sentence: «{correct_sentence}»")
+    print(f"Respeak sentence: «{respeak_sentence}»")
+    print(f"User sentence: «{user_sentence}»")
+    print(f"Correct score: {score_correct}, Respeak score: {score_respeak}")
+    print()
 
-    # def score_sentence(
-    #         correct_sentence: str,
-    #         user_sentence: str
-    # ) -> tuple[float, list[bool]]:
-    #     correct_sentence_letters = just_letters(correct_sentence)
-    #     user_sentence_letters = just_letters(user_sentence)
-    #
-    #     correct_tokens = correct_sentence_letters.split()
-    #     user_tokens = user_sentence_letters.split()
-    #
-    #     correct_tokens_spaces = add_space_tokens(correct_tokens)
-    #     user_tokens_spaces = add_space_tokens(user_tokens)
-    #
-    #     ans = [True for _ in correct_tokens]
-    #     words = word_mapper(correct_tokens_spaces, user_tokens_spaces)[0]
-    #
-    #     # Each False in space word is propagated as False to the adjoining letter words
-    #     for i in range(len(ans) - 1):
-    #         if not words[2 * i]:
-    #             ans[i] = False
-    #         else:
-    #             if not words[2 * i + 1]:
-    #                 ans[i] = False
-    #                 ans[i + 1] = False
-    #
-    #     if not words[-1]:
-    #         ans[-1] = False
-    #
-    #     word_sizes = [len(word) for word in correct_tokens]
-    #     total_word_count = sum(word_sizes)
-    #     wrong_words_sizes = sum(word_sizes[i] for i in range(len(word_sizes)) if not ans[i])
-    #     accuracy = (total_word_count - wrong_words_sizes) / total_word_count
-    #     return accuracy, ans
+    return (
+        score_respeak,
+        score_correct,
+        score_correct > score_respeak,
+        words_correct,
+        correct2respeak_map,
+        words_respeak,
+    )

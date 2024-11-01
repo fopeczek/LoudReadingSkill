@@ -24,9 +24,9 @@ def get_real_respeak_server(s2t: ISpeech2Text) -> IRespeak:
             print("Done.")
 
         def respeak(self, text: str) -> tuple[bool, str]:
-            print(f"Sending text to respeak: '{text}'...")
+            # print(f"Sending text to respeak: '{text}'...")
             ans = self._respeak_sync(text)
-            print(f"Respeak done: '{ans[1]}'")
+            # print(f"Respeak done: '{ans[1]}'")
             return ans
 
         def _respeak_sync(self, text: str) -> tuple[bool, str]:

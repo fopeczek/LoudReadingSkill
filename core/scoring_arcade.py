@@ -146,7 +146,14 @@ class Scoring_Arcade(IScoring):
         """
         assert sentence in self._questions, f"Unknown sentence: {sentence}"
 
-        accuracy, words = score_sentence(
+        (
+            accuracy_respeak,
+            accuracy_correct,
+            correct_flag,
+            words_correct,
+            _,
+            words_respeak,
+        ) = score_sentence(
             correct_sentence=sentence,
             respeak_sentence=respeak_sentence,
             user_sentence=user_answer,
@@ -158,14 +165,17 @@ class Scoring_Arcade(IScoring):
         )
 
         score = ScoreDO(
-            accuracy=accuracy,
+            respeak_accuracy=accuracy_respeak,
+            correct_accuracy=accuracy_correct,
+            flag_correct=correct_flag,
             thinking_time=thinking_time,
             speaking_time=speaking_time,
             user_answer=user_answer,
             timestamp=datetime.datetime.now(),
             saved_audio=saved_audio_path,
             time_penalty=time_penalty,
-            words=words,
+            respeak_words=words_respeak,
+            correct_words=words_correct,
         )
 
         self._score_history.add_score(score, sentence)
