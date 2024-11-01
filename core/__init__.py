@@ -11,7 +11,7 @@ from .scoring_arcade import Scoring_Arcade as Scoring_Arcade
 from .scoring_story import Scoring_Story as Scoring_Story
 from .sentence_accuracy import score_sentence
 
-from .voice_sample import VoiceSample as VoiceSample
+from .voice_sample import VoiceSample as VoiceSample, voice_sample_from_wav
 
 from .scoring import get_resource_path as get_resource_path
 
@@ -50,4 +50,5 @@ __all__ = [
     "ScoreHistoryDO",
     "ScoreDO",
     "get_respeak_server",
+    "voice_sample_from_wav",
 ]

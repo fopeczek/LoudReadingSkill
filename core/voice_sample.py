@@ -101,7 +101,7 @@ def test_voice_sample() -> VoiceSample:
     return voice_sample
 
 
-def test_voice_sample_from_wav(wav_file: Path) -> VoiceSample:
+def voice_sample_from_wav(wav_file: Path) -> VoiceSample:
     with wave.open(str(wav_file), "rb") as wf:
         data = wf.readframes(wf.getnframes())
         frame_rate = wf.getframerate()
