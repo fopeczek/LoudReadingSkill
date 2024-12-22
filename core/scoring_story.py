@@ -81,7 +81,7 @@ class Scoring_Story(IScoring):
         stripped_sentence = just_letters(sentence)
         effort = len(stripped_sentence) - len(words) * 2
         # Add quadratic component to the effort, normalized such that 90-letter effort will be double-scored
-        effort += effort * (effort / 140) ** 2
+        effort += effort * (effort / 140) ** 2 * 0.3
 
         print(f"Effort: {effort}")
 
