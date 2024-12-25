@@ -39,7 +39,7 @@ class Text2Speech_GoogleTTS(IText2Speech):
 
             @overrides
             def get_sound(self, text: str) -> VoiceSample:
-                tts = gTTS(text=text, lang="en")
+                tts = gTTS(text=text, lang="pl")
                 tmp_mp3 = tempfile.NamedTemporaryFile(suffix=".mp3", delete=False)
                 tts.save(tmp_mp3.name)
 

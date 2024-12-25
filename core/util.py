@@ -28,7 +28,7 @@ def create_and_load_file_str(file_name: Path, default_content: str):
     return default_content
 
 
-ignored_letters = '!?".,;:-„”()[]{}—'
+ignored_letters = '!?".,;:–-„”()[]{}—«»…'
 
 
 def just_letters(s: str) -> str:

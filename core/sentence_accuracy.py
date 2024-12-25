@@ -272,7 +272,7 @@ def make_respeak_map(correct_sentence: str, respeak_sentence: str) -> list[int]:
     for i, idx in enumerate(mapped_words):
         if idx == -1 and i % 2 == 1 and i >= 3:
             print(
-                f"Warning: correct word {correct_tokens[i%2 + 1]} not found in the respeak sentence."
+                f"Warning: correct word «{correct_tokens[i%2 + 1]}» not found in the respeak sentence."
             )
 
     return mapped_words
