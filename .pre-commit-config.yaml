@@ -3,7 +3,7 @@
 repos:
   # General hooks
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -17,11 +17,11 @@ repos:
       - id: destroyed-symlinks
       - id: detect-private-key
       - id: end-of-file-fixer
-#        exclude: (\.dat)|(\.vcxproj(\.filters)?)|(\.targets)$
+      #        exclude: (\.dat)|(\.vcxproj(\.filters)?)|(\.targets)$
       - id: fix-byte-order-marker
       - id: mixed-line-ending
-#      - id: no-commit-to-branch
-#        args: [--branch, master]
+      #      - id: no-commit-to-branch
+      #        args: [--branch, master]
       - id: trailing-whitespace
   - repo: https://github.com/syntaqx/git-hooks
     rev: v0.0.18
@@ -51,7 +51,7 @@ repos:
         files: \.(md|rst|adoc)$
         args: [-L, thirdparty, --write-changes]
   - repo: https://github.com/crate-ci/typos
-    rev: v1.21.0
+    rev: v1.28.4
     hooks:
       - id: typos
         verbose: true
@@ -65,7 +65,7 @@ repos:
   # Python hooks
   - repo: https://github.com/astral-sh/ruff-pre-commit
     # Ruff version.
-    rev: v0.4.7
+    rev: v0.8.4
     hooks:
       # Run the linter.
       - id: ruff
@@ -74,7 +74,7 @@ repos:
       - id: ruff-format
   # Disable bandit for now, as it fails on ./src/cpp-code-format.py:142:20.
   - repo: https://github.com/PyCQA/bandit  # Linter for security issues
-    rev: 1.7.8
+    rev: 1.8.0
     hooks:
       - id: bandit
         args:
@@ -87,7 +87,7 @@ repos:
 
   # YAML
   - repo: https://github.com/lyz-code/yamlfix  # Formatter
-    rev: 1.16.0
+    rev: 1.17.0
     hooks:
       - id: yamlfix
   - repo: https://github.com/adrienverge/yamllint  # Linter
@@ -96,8 +96,8 @@ repos:
       - id: yamllint
 
   # BASH
-  - repo: https://github.com/lovesegfault/beautysh  # Formatter
-    rev: v6.2.1
+  - repo: https://github.com/adamryczkowski/beautysh  # Formatter
+    rev: v6.2.3
     hooks:
       - id: beautysh
         args: [--indent-size=4, --tab, --force-function-style=fnpar]

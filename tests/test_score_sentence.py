@@ -93,6 +93,13 @@ def test():
 
 def respeak():
     test_respeak(
+        "Potem rozścieliłem w nowym legowisku jego kocyk, również otrzymany od Ani. Posłanie – kupione przez Młodego – było naprawdę fajne, wyglądało na wygodne, choć osobiście tego nie sprawdzałem. Kocyk zaś Elf znał, pachniał mu znajomo i miałem nadzieję, że pomoże psiakowi w zaadaptowaniu się do nowego miejsca.",
+        "Potem rozścieliłem w nowym legowisku jego kocyk, również otrzymany od Ani. Posłanie, kupione przez młodego, było naprawdę fajne. Wyglądało na wygodne, choć osobiście tego nie sprawdzałem. Kocyk zaś elf znał, pachniał mu znajomo i miałem nadzieję, że pomoże psiakowi w zaadaptowaniu się do nowego miejsca.",
+        "Potem rozcięliłem w nowym logowisku jego kocyk, również otrzymany od Ani. Posłanie, kupione przez młodego, było naprawdę fajne. Wyglądało na wygodne, choć osobiście tego nie sprawdzałem. Kocyk zaś Elf znał, pachniał mu znajomo i miałam nadzieję, że pomoże psiakowi w zaadoptowaniu się do nowego miejsca.",
+        [1, 1, 1, 1, 1, 1, 1, 1, 1, 1],
+    )
+
+    test_respeak(
         "Nie ma się czym przejmować! Jakbyśmy siedzieli sobie gdzie przy stoliku w kawiarni! Głupota czy bezmyślność?",
         "Nie ma się czym przejmować. Jakbyśmy siedzieli sobie gdzie przy stoliku w kawiarni. Upota czy bezmyślność?",
         "Nie ma się czym przejmować, jakbyśmy siedzieli sobie gdzie przy stoliku w kawiarni. Głupota czy pozmyślność?",
@@ -116,5 +123,5 @@ def respeak():
 
 
 if __name__ == "__main__":
-    test()
-    # respeak()
+    # test()
+    respeak()

@@ -1,6 +1,7 @@
 import difflib
 import bisect
 
+
 from .util import just_letters
 
 
@@ -156,7 +157,7 @@ def word_mapper(
     # For each correct token returns the corresponding user token, and bool indicating whether there was a clean match.
 
     sequence_matcher = difflib.SequenceMatcher(
-        None, "".join(correct_tokens), "".join(user_tokens)
+        None, "".join(correct_tokens), "".join(user_tokens), autojunk=False
     )
     mb = sequence_matcher.get_matching_blocks()
     mb = [mb for mb in mb if mb.size > 0]
